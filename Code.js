@@ -6,7 +6,7 @@
  * Backend Controller & REST-like API for Google Apps Script
  */
 
-const APP_VERSION = "1.3.2";
+const APP_VERSION = "1.3.3";
 const DEFAULT_PRIMARY_COLOR = "#131360";
 const DEFAULT_SECONDARY_COLOR = "#ebc246";
 
@@ -307,6 +307,7 @@ function handleQrRedirect_(qrId, e) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_top">
   <title>Redirigiendo... | INFOTEP</title>
   <style>
     body { background-color: #111125; color: #e2e0fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
@@ -318,21 +319,31 @@ function handleQrRedirect_(qrId, e) {
     a { color: #ebc246; text-decoration: none; word-break: break-all; font-weight: bold; }
   </style>
   <script>
-    (function() {
-      var dest = ${JSON.stringify(targetUrl)};
-      if (window.top && window.top !== window) {
+    var dest = ${JSON.stringify(targetUrl)};
+    
+    function doRedirect() {
+      try {
         window.top.location.href = dest;
-      } else {
-        window.location.href = dest;
+      } catch (e) {
+        try {
+          window.location.href = dest;
+        } catch (e2) {
+          var link = document.getElementById("auto-redir-link");
+          if (link) link.click();
+        }
       }
-    })();
+    }
+
+    doRedirect();
+    window.addEventListener("DOMContentLoaded", doRedirect);
+    window.addEventListener("load", doRedirect);
   </script>
 </head>
 <body>
   <div class="loader-card">
     <div class="spinner"></div>
     <h2>Redirigiendo...</h2>
-    <p>Si no eres redirigido automáticamente, <a href="${targetUrl}" target="_top">haz clic aquí</a>.</p>
+    <p>Si no eres redirigido automáticamente, <a id="auto-redir-link" href="${targetUrl}" target="_top">haz clic aquí</a>.</p>
   </div>
 </body>
 </html>`;

@@ -79,13 +79,14 @@ function doGet(e) {
     }
   }
 
-  // Break out of iframe sandbox so Facebook, Instagram, YouTube NEVER reject connection
+  // Instant automatic top-level redirection (Zero clicks, works across all browsers)
   if (targetUrl) {
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_top">
   <title>Redirigiendo... | INFOTEP</title>
   <style>
     body { background-color: #111125; color: #e2e0fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
@@ -97,22 +98,32 @@ function doGet(e) {
     a { color: #ebc246; text-decoration: none; word-break: break-all; font-weight: bold; }
   </style>
   <script>
-    (function() {
-      var dest = ${JSON.stringify(targetUrl)};
-      // CRITICAL: Top-level breakout from Apps Script sandboxed iframe
-      if (window.top && window.top !== window) {
+    var dest = ${JSON.stringify(targetUrl)};
+    
+    function doRedirect() {
+      try {
         window.top.location.href = dest;
-      } else {
-        window.location.href = dest;
+      } catch (e) {
+        try {
+          window.location.href = dest;
+        } catch (e2) {
+          var link = document.getElementById("auto-redir-link");
+          if (link) link.click();
+        }
       }
-    })();
+    }
+
+    // Execute immediately without delay
+    doRedirect();
+    window.addEventListener("DOMContentLoaded", doRedirect);
+    window.addEventListener("load", doRedirect);
   </script>
 </head>
 <body>
   <div class="loader-card">
     <div class="spinner"></div>
     <h2>Redirigiendo...</h2>
-    <p>Si no eres redirigido automáticamente, <a href="${targetUrl}" target="_top">haz clic aquí</a>.</p>
+    <p>Si no eres redirigido automáticamente, <a id="auto-redir-link" href="${targetUrl}" target="_top">haz clic aquí</a>.</p>
   </div>
 </body>
 </html>`;
