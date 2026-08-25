@@ -13,9 +13,11 @@
  */
 
 // CONFIGURACIÓN:
-// Reemplaza con el ID de tu Google Sheet 'BD - Generador QRs'
-// (El ID es el texto largo entre /d/ y /edit en la URL de tu hoja de cálculo)
+// Opción 1: Coloca el ID de tu Google Sheet (Ej: "1AbCdEfGhIjKlMnOpQrStUvWxYz...")
 const SPREADSHEET_ID = "TU_SPREADSHEET_ID_AQUI";
+
+// Opción 2 (Opcional): Si publicaste la hoja en la web, pega aquí la URL completa del CSV
+const PUBLISHED_CSV_URL = "";
 
 export default {
   async fetch(request, env, ctx) {
@@ -43,25 +45,57 @@ export default {
     }
 
     try {
-      // Consultar la hoja 'QRs' en formato CSV directamente desde Google Sheets
-      const sheetCsvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=QRs`;
+      // Determinar las URLs de descarga del CSV de Google Sheets
+      let urlsToTry = [];
       
-      // Consultar con caché corta de 5 segundos para máxima velocidad y cambios en tiempo real
-      const response = await fetch(sheetCsvUrl, {
-        cf: {
-          cacheTtl: 5,
-          cacheEverything: true
-        }
-      });
+      if (PUBLISHED_CSV_URL && PUBLISHED_CSV_URL.startsWith("http")) {
+        urlsToTry.push(PUBLISHED_CSV_URL);
+      }
+      
+      if (SPREADSHEET_ID && SPREADSHEET_ID !== "TU_SPREADSHEET_ID_AQUI") {
+        urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=QRs`);
+        urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&sheet=QRs`);
+        urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv`);
+      }
 
-      if (!response.ok) {
-        return new Response(getNotFoundHtml("No se pudo conectar con la base de datos de QRs."), {
+      let csvText = "";
+      let lastStatus = 0;
+
+      for (const targetUrl of urlsToTry) {
+        try {
+          const res = await fetch(targetUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              "Accept": "text/csv,text/plain,*/*"
+            },
+            cf: {
+              cacheTtl: 5,
+              cacheEverything: true
+            }
+          });
+          
+          lastStatus = res.status;
+          if (res.ok) {
+            const txt = await res.text();
+            // Validar que realmente sea un CSV y no una página HTML de error de Google
+            if (txt && !txt.includes("<!DOCTYPE html") && !txt.includes("<html")) {
+              csvText = txt;
+              break;
+            }
+          }
+        } catch(e) {}
+      }
+
+      if (!csvText) {
+        return new Response(getNotFoundHtml(
+          `No se pudo leer la hoja de cálculo (Estado HTTP: ${lastStatus}).<br><br>` +
+          `<strong>Solución:</strong> En Google Sheets, ve a <em>Archivo &gt; Compartir &gt; Publicar en la web</em>, selecciona la pestaña <strong>QRs</strong>, formato <strong>Valores separados por comas (.csv)</strong> y haz clic en <strong>Publicar</strong>.`
+        ), {
           status: 502,
           headers: { "Content-Type": "text/html;charset=UTF-8" }
         });
       }
 
-      const csvText = await response.text();
       const rows = parseCSV(csvText);
 
       // Buscar el QR por ID (Columna 0 = ID, Columna 3 = Destino, Columna 9 = Estado)
@@ -80,7 +114,7 @@ export default {
       }
 
       if (targetUrl) {
-        // Asegurar que tenga protocolo https://
+        // Asegurar protocolo https://
         if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
           targetUrl = "https://" + targetUrl;
         }
@@ -90,7 +124,7 @@ export default {
       }
 
       // Si no existe o está inactivo
-      return new Response(getNotFoundHtml("El código QR solicitado no existe o se encuentra inactivo."), {
+      return new Response(getNotFoundHtml(`El código QR <code>${qrId}</code> no existe o se encuentra inactivo.`), {
         status: 404,
         headers: { "Content-Type": "text/html;charset=UTF-8" }
       });
@@ -156,14 +190,16 @@ function getNotFoundHtml(message) {
   <title>Código no disponible | INFOTEP</title>
   <style>
     body { background: #111125; color: #e2e0fc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-    .card { background: #1e1e32; padding: 40px 32px; border-radius: 24px; border: 1px solid #464651; text-align: center; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .card { background: #1e1e32; padding: 36px 28px; border-radius: 24px; border: 1px solid #464651; text-align: center; max-width: 440px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     h2 { color: #ffb4ab; margin: 0 0 12px; font-size: 20px; }
-    p { color: #c7c5d2; font-size: 14px; margin: 0; line-height: 1.5; }
+    p { color: #c7c5d2; font-size: 14px; margin: 0; line-height: 1.6; }
+    code { background: #131329; padding: 2px 6px; border-radius: 6px; color: #ebc246; }
+    em, strong { color: #ffffff; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>Código no encontrado</h2>
+    <h2>Aviso del Redireccionador</h2>
     <p>${message}</p>
   </div>
 </body>
