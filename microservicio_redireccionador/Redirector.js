@@ -39,8 +39,9 @@ function doGet(e) {
   }
 
   let targetUrl = "";
+  let qrName = "Campaña Institucional";
 
-  // Query shared Google Sheet directly to guarantee 100% real-time instant edits
+  // Query shared Google Sheet directly in real-time
   if (SPREADSHEET_ID) {
     try {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -51,6 +52,7 @@ function doGet(e) {
           const id = String(rows[i][0] || "").trim();
           const status = String(rows[i][9] || "").toUpperCase().trim();
           if (id === qrId && status === "ACTIVO") {
+            qrName = String(rows[i][1] || "Campaña INFOTEP").trim();
             targetUrl = String(rows[i][3] || "").trim();
 
             // Register scan metric
@@ -79,51 +81,172 @@ function doGet(e) {
     }
   }
 
-  // Instant automatic top-level redirection (Zero clicks, works across all browsers)
+  // Institutional Branded Landing Portal
   if (targetUrl) {
+    let hostname = "el enlace de destino";
+    try {
+      hostname = new URL(targetUrl).hostname.replace('www.', '');
+    } catch(e) {}
+
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <base target="_top">
-  <title>Redirigiendo... | INFOTEP</title>
+  <title>${qrName} | INFOTEP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
   <style>
-    body { background-color: #111125; color: #e2e0fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-    .loader-card { text-align: center; background: #1e1e32; padding: 32px 48px; border-radius: 24px; border: 1px solid #333348; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-    .spinner { width: 44px; height: 44px; border: 4px solid #28283d; border-top-color: #ebc246; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    h2 { font-size: 20px; margin: 0 0 8px; color: #c0c1ff; font-weight: 600; }
-    p { font-size: 14px; margin: 0; color: #c7c5d2; }
-    a { color: #ebc246; text-decoration: none; word-break: break-all; font-weight: bold; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #111125;
+      color: #e2e0fc;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #1a1a36;
+      border: 1px solid #323258;
+      border-radius: 28px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .badge {
+      width: 68px;
+      height: 68px;
+      background: #131360;
+      border: 2px solid #ebc246;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(235, 194, 70, 0.25);
+    }
+    .badge svg {
+      width: 38px;
+      height: 38px;
+    }
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .inst-name {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #ebc246;
+      text-transform: uppercase;
+    }
+    .campaign-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.3;
+    }
+    .dest-hint {
+      font-size: 12px;
+      color: #9d9bb8;
+      background: #131329;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid #282846;
+      word-break: break-all;
+      max-width: 100%;
+    }
+    .btn-continue {
+      background: #ebc246;
+      color: #131360;
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-decoration: none;
+      padding: 16px 28px;
+      border-radius: 18px;
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px rgba(235, 194, 70, 0.35);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-continue:hover {
+      background: #f7d264;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(235, 194, 70, 0.45);
+    }
+    .btn-continue:active {
+      transform: scale(0.98);
+    }
+    .footer-note {
+      font-size: 11px;
+      color: #6b6985;
+      margin-top: 8px;
+    }
   </style>
   <script>
     var dest = ${JSON.stringify(targetUrl)};
-    
-    function doRedirect() {
+    // Attempt automatic popup or direct top navigation if browser permissions allow
+    window.addEventListener('DOMContentLoaded', function() {
       try {
-        window.top.location.href = dest;
-      } catch (e) {
-        try {
-          window.location.href = dest;
-        } catch (e2) {
-          var link = document.getElementById("auto-redir-link");
-          if (link) link.click();
+        if (window.top && window.top.location) {
+          window.top.location.href = dest;
         }
-      }
-    }
-
-    // Execute immediately without delay
-    doRedirect();
-    window.addEventListener("DOMContentLoaded", doRedirect);
-    window.addEventListener("load", doRedirect);
+      } catch(e) {}
+    });
   </script>
 </head>
 <body>
-  <div class="loader-card">
-    <div class="spinner"></div>
-    <h2>Redirigiendo...</h2>
-    <p>Si no eres redirigido automáticamente, <a id="auto-redir-link" href="${targetUrl}" target="_top">haz clic aquí</a>.</p>
+  <div class="card">
+    <div class="badge">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="44" stroke="#ebc246" stroke-width="6" stroke-dasharray="180 80"/>
+        <circle cx="50" cy="50" r="28" fill="#131360" stroke="#009c51" stroke-width="4"/>
+        <path d="M50 34V66M34 50H66" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="title-group">
+      <span class="inst-name">INFOTEP • MERCADEO</span>
+      <h1 class="campaign-title">${qrName}</h1>
+    </div>
+
+    <div class="dest-hint">
+      Destino: <strong>${hostname}</strong>
+    </div>
+
+    <a href="${targetUrl}" target="_top" class="btn-continue" id="btn-go">
+      <span>Continuar al enlace</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+
+    <span class="footer-note">Código QR Oficial de INFOTEP</span>
   </div>
 </body>
 </html>`;
