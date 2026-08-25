@@ -13,11 +13,11 @@
  */
 
 // CONFIGURACIÓN:
-// Pega aquí la URL completa que te dio Google al "Publicar en la web" como CSV
-let PUBLISHED_CSV_URL = "";
-
-// Opcional: ID de tu hoja de cálculo
+// Opción 1: Coloca el ID de tu Google Sheet (Ej: "1AbCdEfGhIjKlMnOpQrStUvWxYz...")
 let SPREADSHEET_ID = "";
+
+// Opción 2: O pega aquí la URL que te dio Google al "Publicar en la web" como CSV
+let PUBLISHED_CSV_URL = "";
 
 export default {
   async fetch(request, env, ctx) {
