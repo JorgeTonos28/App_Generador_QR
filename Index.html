@@ -8,6 +8,20 @@
 </head>
 <body class="bg-background font-body-md text-on-background min-h-screen">
 
+  <!-- ========================================================================= -->
+  <!-- FULL-SCREEN INITIAL LOADING OVERLAY                                       -->
+  <!-- ========================================================================= -->
+  <div id="initial-loading-screen" class="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-5 transition-opacity duration-300">
+    <div class="w-20 h-20 rounded-2xl bg-surface-container flex items-center justify-center p-2.5 border border-outline-variant/30 shadow-2xl overflow-hidden">
+      <img src="<?= logoDataUrl ?>" alt="INFOTEP" class="w-full h-full object-contain">
+    </div>
+    <div class="flex flex-col items-center gap-2 text-center">
+      <div class="w-10 h-10 border-4 border-surface-container-high border-t-secondary rounded-full animate-spin"></div>
+      <span class="font-headline-md text-base sm:text-lg font-bold text-on-surface">Cargando Generador de QRs...</span>
+      <span class="text-xs text-on-surface-variant">Sincronizando campañas y perfil de usuario</span>
+    </div>
+  </div>
+
   <!-- Mobile Sidebar Backdrop -->
   <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"></div>
 
@@ -536,52 +550,52 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: REDESIGNED QR PREVIEW & HIGH-RES VIEW (FIXES SCREENSHOT 1)          -->
+  <!-- MODAL: CLEAN QR PREVIEW & HIGH-RES VIEW (PURE QR WITHOUT OVERLAYS)        -->
   <!-- ========================================================================= -->
   <div id="qr-preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/85 backdrop-blur-md">
-    <div class="bg-surface-container p-6 sm:p-8 rounded-3xl shadow-2xl max-w-md w-full flex flex-col gap-5 border border-outline-variant/20 relative animate-modal">
+    <div class="bg-surface-container p-6 sm:p-7 rounded-3xl shadow-2xl max-w-sm sm:max-w-md w-full flex flex-col gap-4 border border-outline-variant/20 relative animate-modal">
       
       <!-- Top Modal Header -->
       <div class="flex items-start justify-between">
-        <div class="flex flex-col gap-0.5">
-          <span id="qr-preview-modal-type-chip" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary/15 text-secondary self-start uppercase">QR ESTÁTICO</span>
-          <h3 id="qr-preview-modal-title" class="font-headline-md text-lg font-bold text-on-surface mt-1">Campaña Institucional</h3>
+        <div class="flex flex-col gap-1">
+          <span id="qr-preview-modal-type-chip" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary/15 text-secondary self-start uppercase tracking-wider">QR ESTÁTICO</span>
+          <h3 id="qr-preview-modal-title" class="font-headline-md text-base sm:text-lg font-bold text-on-surface">Campaña Institucional</h3>
         </div>
         <button onclick="closePreviewModal()" class="text-on-surface-variant hover:text-on-surface p-1.5 rounded-full hover:bg-surface-container-high transition-colors" title="Cerrar">
-          <span class="material-symbols-outlined text-[22px]">close</span>
+          <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
 
-      <!-- Centered QR Box (Pure White with shadow) -->
-      <div class="bg-white rounded-2xl p-4 shadow-xl flex items-center justify-center mx-auto border border-outline-variant/15">
+      <!-- Pure White QR Box (Clean canvas without buttons or overlay text) -->
+      <div class="w-full bg-white rounded-2xl p-4 shadow-xl flex items-center justify-center mx-auto border border-outline-variant/15">
         <div id="qr-preview-modal-canvas" class="w-56 h-56 flex items-center justify-center">
           <!-- Canvas injected dynamically -->
         </div>
       </div>
 
-      <!-- Info Details Card -->
-      <div class="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/10 flex flex-col gap-1.5 text-xs">
+      <!-- Dedicated Link Info Box BELOW the QR -->
+      <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex flex-col gap-1 text-xs">
         <div class="flex items-center justify-between text-on-surface-variant">
-          <span class="font-label-bold uppercase text-[10px]">Destino del enlace:</span>
-          <span id="qr-preview-modal-scan-count" class="text-tertiary font-bold text-[10px]">Directo</span>
+          <span class="font-label-bold uppercase text-[9px] tracking-wider">Enlace de Destino:</span>
+          <span id="qr-preview-modal-scan-count" class="text-tertiary font-bold text-[9px]">Directo</span>
         </div>
-        <a id="qr-preview-modal-link" href="#" target="_blank" class="text-xs text-primary underline truncate hover:text-primary-fixed flex items-center gap-1" title="Abrir enlace">
-          <span id="qr-preview-modal-link-text">https://infotep.gob.do</span>
-          <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+        <a id="qr-preview-modal-link" href="#" target="_blank" class="text-xs text-primary underline truncate hover:text-primary-fixed flex items-center gap-1 font-medium" title="Abrir enlace en nueva pestaña">
+          <span id="qr-preview-modal-link-text" class="truncate">https://infotep.gob.do</span>
+          <span class="material-symbols-outlined text-[13px] flex-shrink-0">open_in_new</span>
         </a>
       </div>
 
-      <!-- Action Buttons Row -->
-      <div class="grid grid-cols-3 gap-2.5 w-full pt-1">
-        <button id="btn-modal-download-png" class="bg-secondary text-on-secondary font-bold text-xs py-3 px-2 rounded-xl shadow hover:bg-secondary-fixed transition-all flex items-center justify-center gap-1.5" title="Descargar en formato PNG 1200px">
+      <!-- Action Buttons Row (BELOW the QR, isolated and clean) -->
+      <div class="grid grid-cols-3 gap-2 w-full pt-1">
+        <button id="btn-modal-download-png" class="bg-secondary text-on-secondary font-bold text-xs py-2.5 px-2 rounded-xl shadow hover:bg-secondary-fixed transition-all flex items-center justify-center gap-1" title="Descargar PNG 1200px">
           <span class="material-symbols-outlined text-[16px]">image</span>
           PNG
         </button>
-        <button id="btn-modal-download-svg" class="bg-surface-container-high text-on-surface font-bold text-xs py-3 px-2 rounded-xl hover:bg-surface-container-highest transition-all flex items-center justify-center gap-1.5 border border-outline-variant/20" title="Descargar Vector SVG">
+        <button id="btn-modal-download-svg" class="bg-surface-container-high text-on-surface font-bold text-xs py-2.5 px-2 rounded-xl hover:bg-surface-container-highest transition-all flex items-center justify-center gap-1 border border-outline-variant/20" title="Descargar Vector SVG">
           <span class="material-symbols-outlined text-[16px]">polyline</span>
           SVG
         </button>
-        <button id="btn-modal-download-pdf" class="bg-surface-container-high text-on-surface font-bold text-xs py-3 px-2 rounded-xl hover:bg-surface-container-highest transition-all flex items-center justify-center gap-1.5 border border-outline-variant/20" title="Descargar PDF Impresión">
+        <button id="btn-modal-download-pdf" class="bg-surface-container-high text-on-surface font-bold text-xs py-2.5 px-2 rounded-xl hover:bg-surface-container-highest transition-all flex items-center justify-center gap-1 border border-outline-variant/20" title="Descargar PDF Impresión">
           <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
           PDF
         </button>

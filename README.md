@@ -7,11 +7,12 @@
 ## 1. Propósito y Descripción General
 El **Sistema Generador de Códigos QR** es una plataforma institucional interna diseñada para eliminar la dependencia de servicios externos de pago y proporcionar control total sobre los códigos QR generados para campañas, materiales promocionales, eventos y folletos de INFOTEP.
 
-### Novedades v1.1.0
-- **Modalidad de Enlace Directo (Estático):** Permite generar QRs que van 100% directo a la URL de destino (Instagram, web externa, folletos), sin pasar por Apps Script ni requerir autenticación.
-- **Rediseño Completo del Modal de Visualización:** Tarjeta modal estilizada con previsualización limpia del código QR, enlace directo y botones de descarga en PNG (1200px), SVG y PDF.
-- **Corrección de Diseño en Tarjetas de Métricas:** Se eliminó la superposición de texto en "Mayor Rendimiento" (Impacto Rápido).
-- **Diseño 100% Responsivo en Móviles:** Menú lateral tipo *drawer* deslizable con botón hamburguesa y tablas adaptativas con scroll horizontal optimizado para smartphones y tablets.
+### Novedades v1.2.0
+- **Pantalla de Carga Inicial Unificada:** Muestra un loader con el logotipo de INFOTEP y spinner de estado hasta que todos los recursos de sesión, permisos y datos de campañas estén 100% listos.
+- **Auto-Ajuste Proporcional del Logotipo en QR:** Corrección matemática de aspect ratio para evitar que el logotipo institucional se estreche o distorsione en el centro del código QR.
+- **Modal de Previsualización Despejado:** El código QR se presenta en un contenedor blanco aislado sin textos ni botones superpuestos. Los botones de descarga y el enlace de destino se ubican de forma limpia debajo del gráfico.
+- **Modalidad de Enlace Directo (Estático):** Permite generar QRs que van directo a la URL de destino (Instagram, web externa, folletos), sin pasar por Apps Script ni requerir autenticación.
+- **Diseño 100% Responsivo:** Menú lateral tipo *drawer* deslizable con botón hamburguesa para smartphones y tablets.
 
 ### Características Clave
 - **Sin vencimiento:** Códigos permanentes alojados en la infraestructura institucional de Google Workspace.
@@ -37,7 +38,7 @@ El **Sistema Generador de Códigos QR** es una plataforma institucional interna 
 | [`Index.html`](file:///c:/Dev/AppScript/App_Generador_QR/Index.html) | Frontend | Plantilla Single Page Application (SPA) responsive basada en el sistema de diseño Stitch. |
 | [`Denied.html`](file:///c:/Dev/AppScript/App_Generador_QR/Denied.html) | Frontend | Pantalla institucional de acceso denegado para usuarios no habilitados. |
 | [`css.html`](file:///c:/Dev/AppScript/App_Generador_QR/css.html) | Estilos | Configuración de Tailwind CSS, fuentes tipográficas (Sora, Plus Jakarta Sans), variables y animaciones. |
-| [`js.html`](file:///c:/Dev/AppScript/App_Generador_QR/js.html) | Lógica Cliente | Motor de generación de códigos QR Nivel H con logo de INFOTEP, exportadores (PNG, SVG, PDF) y router. |
+| [`js.html`](file:///c:/Dev/AppScript/App_Generador_QR/js.html) | Lógica Cliente | Motor de generación de códigos QR Nivel H con logo proporcional, exportadores (PNG, SVG, PDF) y router. |
 | [`appsscript.json`](file:///c:/Dev/AppScript/App_Generador_QR/appsscript.json) | Manifest | Configuración del proyecto Apps Script, zona horaria (`America/Santo_Domingo`) y permisos OAuth. |
 | [`AGENTS.md`](file:///c:/Dev/AppScript/App_Generador_QR/AGENTS.md) | Guía | Reglas y estándares obligatorios para agentes de desarrollo y mantenimiento. |
 | [`assets/`](file:///c:/Dev/AppScript/App_Generador_QR/assets) | Recursos | Logotipos institucionales de INFOTEP en color y negativo vectorial. |

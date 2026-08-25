@@ -6,7 +6,7 @@
  * Backend Controller & REST-like API for Google Apps Script
  */
 
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 const DEFAULT_PRIMARY_COLOR = "#131360";
 const DEFAULT_SECONDARY_COLOR = "#ebc246";
 
@@ -241,7 +241,6 @@ function getCurrentUser_() {
  * Handle dynamic QR redirection or Web App presentation
  */
 function doGet(e) {
-  // Check for dynamic redirection parameter (e.g. ?r=qr_id or ?id=qr_id or ?q=qr_id)
   const qrId = (e && e.parameter && (e.parameter.r || e.parameter.id || e.parameter.q)) || "";
   
   if (qrId) {
@@ -290,7 +289,6 @@ function handleQrRedirect_(qrId, e) {
         const status = String(rows[i][9] || "").toUpperCase().trim();
         if (id === qrId && status === "ACTIVO") {
           targetUrl = String(rows[i][3] || "").trim();
-          // Cache target URL for 10 minutes
           if (targetUrl) {
             cache.put("QR_TARGET_" + qrId, targetUrl, 600);
           }
@@ -301,14 +299,12 @@ function handleQrRedirect_(qrId, e) {
   }
 
   if (targetUrl) {
-    // Record scan asynchronously or in background
     try {
       recordScan_(qrId, e);
     } catch (err) {
       Logger.log("Error recording scan: " + err.message);
     }
 
-    // HTML output with instant client & meta redirect
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -342,7 +338,6 @@ function handleQrRedirect_(qrId, e) {
       .addMetaTag("viewport", "width=device-width, initial-scale=1.0");
   }
 
-  // Not found fallback
   const notFoundHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -375,14 +370,12 @@ function recordScan_(qrId, e) {
   const ss = getSpreadsheet_();
   const userAgent = (e && e.parameter && e.parameter.userAgent) || "Scanner Móvil / Navegador";
   
-  // 1. Append to Scans sheet
   const scansSheet = ss.getSheetByName("Scans");
   if (scansSheet) {
     const scanId = "scan_" + Utilities.getUuid().substring(0, 8);
     scansSheet.appendRow([scanId, qrId, new Date().toISOString(), userAgent, "IP_ANON"]);
   }
 
-  // 2. Increment in QRs sheet
   const qrsSheet = ss.getSheetByName("QRs");
   if (qrsSheet) {
     const rows = qrsSheet.getDataRange().getValues();
@@ -477,11 +470,9 @@ function apiGetDashboard() {
       if (isDynamic) dynamicCount++;
     }
 
-    // Sort by createdAt descending for recent activity
     list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     recentActivity = list.slice(0, 5);
 
-    // Find top performing QR
     if (list.length > 0) {
       const sortedByScans = [...list].sort((a, b) => b.scanCount - a.scanCount);
       topQR = sortedByScans[0];
@@ -530,16 +521,13 @@ function apiGetQRs(searchQuery, filterType) {
     const createdAt = rows[i][11];
     const updatedAt = rows[i][12];
 
-    // Filter by role
     const isOwner = createdBy === currentUser.email.toLowerCase();
     const isAdmin = currentUser.role === "ADMIN";
     if (!isAdmin && !isOwner) continue;
 
-    // Filter by type
     if (filter === "DINAMICOS" && type !== "DINAMICO") continue;
     if (filter === "ESTATICOS" && type !== "ESTATICO") continue;
 
-    // Filter by search query
     if (query && !name.toLowerCase().includes(query) && !targetUrl.toLowerCase().includes(query)) {
       continue;
     }
@@ -562,7 +550,6 @@ function apiGetQRs(searchQuery, filterType) {
     });
   }
 
-  // Sort latest first
   result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   return result;
 }
@@ -594,7 +581,6 @@ function apiSaveQR(payload) {
     
     const config = getConfigMap_();
     const webAppUrl = config["WEBAPP_URL"] || ScriptApp.getService().getUrl() || "";
-    // If static, shortUrl is exact targetUrl. If dynamic, shortUrl is webAppUrl?r=id
     const shortUrl = type === "DINAMICO" ? (webAppUrl ? `${webAppUrl}?r=${id}` : `?r=${id}`) : payload.targetUrl.trim();
 
     const rowData = [
@@ -615,7 +601,6 @@ function apiSaveQR(payload) {
 
     qrsSheet.appendRow(rowData);
 
-    // Warm cache for dynamic redirect
     if (type === "DINAMICO") {
       CacheService.getScriptCache().put("QR_TARGET_" + id, payload.targetUrl.trim(), 600);
     }
@@ -685,10 +670,9 @@ function apiUpdateQRUrl(qrId, newTargetUrl) {
     const cleanUrl = newTargetUrl.trim();
     const now = new Date().toISOString();
 
-    qrsSheet.getRange(rowIndex, 4).setValue(cleanUrl); // url_destino
-    qrsSheet.getRange(rowIndex, 13).setValue(now);     // ultima_modificacion
+    qrsSheet.getRange(rowIndex, 4).setValue(cleanUrl);
+    qrsSheet.getRange(rowIndex, 13).setValue(now);
 
-    // Refresh Cache
     CacheService.getScriptCache().put("QR_TARGET_" + qrId, cleanUrl, 600);
 
     return {
@@ -810,13 +794,11 @@ function apiSaveUser(userData) {
     const now = new Date().toISOString();
 
     if (rowIndex > -1) {
-      // Update existing user
       usersSheet.getRange(rowIndex, 2).setValue(cleanName);
       usersSheet.getRange(rowIndex, 3).setValue(department);
       usersSheet.getRange(rowIndex, 4).setValue(role);
       usersSheet.getRange(rowIndex, 5).setValue(status);
     } else {
-      // Create new user
       usersSheet.appendRow([cleanEmail, cleanName, department, role, status, currentUser.email, now, now]);
     }
 

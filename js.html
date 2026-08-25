@@ -11,7 +11,7 @@
 
 // Application Global State
 const state = {
-  version: "1.1.0",
+  version: "1.2.0",
   user: null,
   config: {},
   dashboard: {},
@@ -150,7 +150,7 @@ function showModal(options) {
 }
 
 // ============================================================================
-// QR CODE GENERATION ENGINE (Error Correction Level H + Logo Overlay)
+// QR CODE GENERATION ENGINE (Auto-Fit Aspect Ratio & Clean Composition)
 // ============================================================================
 
 /**
@@ -217,7 +217,7 @@ function generateQRCodeCanvas(text, options = {}) {
 
     // Draw Logo in Center if enabled
     if (hasLogo) {
-      drawCenterLogo(ctx, size / 2, size / 2, Math.round(size * 0.20));
+      drawCenterLogoProportional(ctx, size / 2, size / 2, Math.round(size * 0.22));
     }
 
     ctx.restore();
@@ -246,9 +246,9 @@ function generateQRCodeCanvas(text, options = {}) {
     // Draw QR Modules
     drawQrMatrix(ctx, qr, moduleCount, padding, cellSize, color);
 
-    // Draw Center Logo
+    // Draw Center Logo with exact aspect ratio
     if (hasLogo) {
-      drawCenterLogo(ctx, size / 2, size / 2, Math.round(size * 0.20));
+      drawCenterLogoProportional(ctx, size / 2, size / 2, Math.round(size * 0.22));
     }
   }
 
@@ -272,60 +272,81 @@ function drawQrMatrix(ctx, qr, count, padding, cellSize, color) {
 }
 
 /**
- * Draws the protected center shield and the INFOTEP institutional logo
+ * PROPORTIONAL LOGO DRAWING: Auto-fits natural aspect ratio without stretching
  */
-function drawCenterLogo(ctx, cx, cy, logoSize) {
-  const badgeSize = logoSize + 14;
-  const radius = Math.round(badgeSize * 0.25);
+function drawCenterLogoProportional(ctx, cx, cy, maxBound) {
+  const img = state.cachedLogoImg;
+  
+  if (img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+    const aspect = img.naturalWidth / img.naturalHeight;
+    let drawW, drawH;
 
-  ctx.save();
-  // 1. White Background Shield with rounded corners
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.20)";
-  ctx.shadowBlur = 8;
-  ctx.beginPath();
-  ctx.roundRect(cx - badgeSize / 2, cy - badgeSize / 2, badgeSize, badgeSize, radius);
-  ctx.fill();
-
-  // Border
-  ctx.shadowColor = "transparent";
-  ctx.strokeStyle = "#e2e0fc";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // 2. Draw Cached or Loaded Logo
-  if (state.cachedLogoImg && state.cachedLogoImg.complete && state.cachedLogoImg.naturalWidth > 0) {
-    ctx.drawImage(state.cachedLogoImg, cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize);
-  } else if (state.logoDataUrl) {
-    const img = new Image();
-    img.src = state.logoDataUrl;
-    state.cachedLogoImg = img;
-    if (img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize);
+    if (aspect >= 1) {
+      drawW = maxBound;
+      drawH = maxBound / aspect;
     } else {
-      drawFallbackCenterMotif(ctx, cx, cy, logoSize);
+      drawH = maxBound;
+      drawW = maxBound * aspect;
     }
+
+    // Shield background dimensions with padding
+    const padX = 14;
+    const padY = 10;
+    const badgeW = drawW + padX * 2;
+    const badgeH = drawH + padY * 2;
+    const radius = 14;
+
+    ctx.save();
+    // 1. Draw rounded white badge
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.25)";
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.roundRect(cx - badgeW / 2, cy - badgeH / 2, badgeW, badgeH, radius);
+    ctx.fill();
+
+    // Subtle border
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = "#e2e0fc";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 2. Draw Image preserving exact natural proportions
+    ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+    ctx.restore();
+
   } else {
-    drawFallbackCenterMotif(ctx, cx, cy, logoSize);
+    // Fallback circular badge
+    const badgeSize = maxBound + 12;
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.20)";
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.roundRect(cx - badgeSize / 2, cy - badgeSize / 2, badgeSize, badgeSize, 14);
+    ctx.fill();
+
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = "#e2e0fc";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Draw stylized vector mark
+    ctx.fillStyle = "#131360";
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxBound * 0.40, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#ebc246";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxBound * 0.28, 0.5, Math.PI * 1.8);
+    ctx.stroke();
+
+    ctx.fillStyle = "#009c51";
+    ctx.fillRect(cx - 6, cy - 6, 12, 12);
+    ctx.restore();
   }
-
-  ctx.restore();
-}
-
-function drawFallbackCenterMotif(ctx, cx, cy, logoSize) {
-  ctx.fillStyle = "#131360";
-  ctx.beginPath();
-  ctx.arc(cx, cy, logoSize * 0.44, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#ebc246";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(cx, cy, logoSize * 0.32, 0.5, Math.PI * 1.8);
-  ctx.stroke();
-
-  ctx.fillStyle = "#009c51";
-  ctx.fillRect(cx - 8, cy - 8, 16, 16);
 }
 
 /**
@@ -342,7 +363,7 @@ function updateLivePreview() {
   const name = (nameInput && nameInput.value.trim()) || "Campaña INFOTEP";
 
   const isDynamic = document.querySelector('input[name="qr-type"]:checked')?.value === "dynamic";
-  // If static: encode rawUrl DIRECTLY! If dynamic: encode redirect url
+  // Static: direct URL; Dynamic: webAppUrl?r=preview
   const targetEncode = isDynamic && state.webAppUrl ? `${state.webAppUrl}?r=preview` : rawUrl;
 
   const canvas = generateQRCodeCanvas(targetEncode, {
@@ -384,7 +405,6 @@ function exportCurrentQR() {
         renderRepository();
         renderDashboard();
 
-        // For static QR, encode exact targetUrl directly. For dynamic, encode webAppUrl?r=id
         const finalUrl = isDynamic ? (res.qr.shortUrl.startsWith("http") ? res.qr.shortUrl : (state.webAppUrl + res.qr.shortUrl)) : res.qr.targetUrl;
         
         const fullCanvas = generateQRCodeCanvas(finalUrl, {
@@ -445,12 +465,19 @@ function downloadAsSVG(text, filename, title) {
   }
 
   let logoSvg = "";
-  if (state.includeLogo && state.logoDataUrl) {
-    const logoSize = size * 0.20;
+  if (state.includeLogo && state.cachedLogoImg && state.cachedLogoImg.naturalWidth > 0) {
+    const img = state.cachedLogoImg;
+    const aspect = img.naturalWidth / img.naturalHeight;
+    const maxBound = size * 0.22;
+    let drawW = aspect >= 1 ? maxBound : maxBound * aspect;
+    let drawH = aspect >= 1 ? maxBound / aspect : maxBound;
     const center = size / 2;
+    const badgeW = drawW + 28;
+    const badgeH = drawH + 20;
+
     logoSvg = `
-      <rect x="${center - (logoSize + 14) / 2}" y="${center - (logoSize + 14) / 2}" width="${logoSize + 14}" height="${logoSize + 14}" rx="18" fill="#ffffff" stroke="#e2e0fc" stroke-width="2" />
-      <image href="${state.logoDataUrl}" x="${center - logoSize / 2}" y="${center - logoSize / 2}" width="${logoSize}" height="${logoSize}" />
+      <rect x="${center - badgeW / 2}" y="${center - badgeH / 2}" width="${badgeW}" height="${badgeH}" rx="18" fill="#ffffff" stroke="#e2e0fc" stroke-width="2" />
+      <image href="${state.logoDataUrl}" x="${center - drawW / 2}" y="${center - drawH / 2}" width="${drawW}" height="${drawH}" />
     `;
   }
 
@@ -479,7 +506,7 @@ function downloadAsPDF(canvas, filename, title, destinationUrl) {
       format: "a4"
     });
 
-    // Background header band
+    // Header band
     doc.setFillColor(19, 19, 96);
     doc.rect(0, 0, 210, 35, "F");
 
@@ -537,8 +564,6 @@ function downloadAsPDF(canvas, filename, title, destinationUrl) {
 
 function navigateTo(viewName) {
   state.currentView = viewName;
-
-  // Close mobile sidebar if open
   closeMobileSidebar();
 
   const views = ["dashboard", "generar-qr", "mis-codigos", "gestion-usuarios", "configuracion"];
@@ -601,7 +626,6 @@ function renderDashboard() {
   if (dynamicCountEl) dynamicCountEl.textContent = Number(d.dynamicCount || 0).toLocaleString();
   if (dynamicPctEl) dynamicPctEl.textContent = `${d.dynamicPercent || 0}% del total`;
 
-  // Render Recent Activity List
   const activityContainer = document.getElementById("dash-recent-list");
   if (activityContainer) {
     const recent = (state.qrs || []).slice(0, 4);
@@ -637,7 +661,6 @@ function renderDashboard() {
     }
   }
 
-  // Render Top Performing QR (NO OVERLAP)
   const topQrCard = document.getElementById("dash-top-qr-card");
   if (topQrCard) {
     const sorted = [...(state.qrs || [])].sort((a, b) => (b.scanCount || 0) - (a.scanCount || 0));
@@ -829,7 +852,7 @@ function renderUsersTable() {
 }
 
 // ============================================================================
-// MODAL DIALOG ACTIONS (REDESIGNED PREVIEW MODAL)
+// CLEAN MODAL PREVIEW (PURE QR ON CANVAS, BUTTONS BELOW)
 // ============================================================================
 
 function openPreviewModal(qrId) {
@@ -849,12 +872,13 @@ function openPreviewModal(qrId) {
 
   title.textContent = qr.name;
   typeChip.textContent = isDyn ? "QR DINÁMICO" : "QR ESTÁTICO (DIRECTO)";
-  typeChip.className = isDyn ? "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary self-start uppercase" : "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary/15 text-secondary self-start uppercase";
+  typeChip.className = isDyn ? "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary self-start uppercase tracking-wider" : "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary/15 text-secondary self-start uppercase tracking-wider";
 
-  scanCount.textContent = isDyn ? `${qr.scanCount || 0} escaneos` : "Enlace Directo";
+  scanCount.textContent = isDyn ? `${qr.scanCount || 0} escaneos` : "Directo";
   linkText.textContent = qr.targetUrl;
   link.href = qr.targetUrl;
 
+  // Generate pure, clean canvas without any overlapping buttons or text
   const canvas = generateQRCodeCanvas(finalUrl, {
     size: 512,
     color: qr.colorHex,
@@ -1065,7 +1089,7 @@ function initApp(bootstrapData) {
   Busy.init();
 
   if (bootstrapData) {
-    state.version = bootstrapData.version || "1.1.0";
+    state.version = bootstrapData.version || "1.2.0";
     state.user = bootstrapData.user || {};
     state.config = bootstrapData.config || {};
     state.dashboard = bootstrapData.dashboard || {};
@@ -1074,8 +1098,14 @@ function initApp(bootstrapData) {
     state.webAppUrl = bootstrapData.webAppUrl || "";
     state.logoDataUrl = bootstrapData.logoDataUrl || "";
 
+    // Preload Logo image to ensure natural proportions are immediately available
     if (state.logoDataUrl) {
       const img = new Image();
+      img.onload = () => {
+        state.cachedLogoImg = img;
+        updateLivePreview();
+        renderDashboard();
+      };
       img.src = state.logoDataUrl;
       state.cachedLogoImg = img;
     }
@@ -1105,6 +1135,15 @@ function initApp(bootstrapData) {
   }
 
   setupEventListeners();
+
+  // Dismiss Full Screen Initial Loading Screen
+  setTimeout(() => {
+    const loader = document.getElementById("initial-loading-screen");
+    if (loader) {
+      loader.style.opacity = "0";
+      setTimeout(() => loader.remove(), 350);
+    }
+  }, 200);
 }
 
 function setupEventListeners() {
