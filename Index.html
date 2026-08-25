@@ -2,25 +2,34 @@
 <html lang="es" class="dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>INFOTEP - Generador de Códigos QR</title>
   <?!= include('css'); ?>
 </head>
-<body class="bg-background font-body-md text-on-background min-h-screen overflow-x-hidden">
+<body class="bg-background font-body-md text-on-background min-h-screen">
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"></div>
 
   <!-- ========================================================================= -->
-  <!-- SIDEBAR NAVIGATION                                                        -->
+  <!-- SIDEBAR NAVIGATION (RESPONSIVE DRAWER)                                    -->
   <!-- ========================================================================= -->
-  <aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/20 shadow-xl transition-all">
+  <aside id="main-sidebar" class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/20 shadow-2xl transition-transform duration-300 -translate-x-full lg:translate-x-0">
     <!-- Brand Header -->
-    <div class="p-6 flex items-center gap-4 border-b border-outline-variant/10">
-      <div class="w-11 h-11 rounded-xl bg-surface-container flex items-center justify-center p-1.5 border border-outline-variant/20 shadow-sm overflow-hidden">
-        <img id="sidebar-logo-img" alt="Logo INFOTEP" class="h-full w-full object-contain" src="<?= logoDataUrl ?>">
+    <div class="p-6 flex items-center justify-between border-b border-outline-variant/10">
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center p-1 border border-outline-variant/20 shadow-sm overflow-hidden">
+          <img id="sidebar-logo-img" alt="Logo INFOTEP" class="h-full w-full object-contain" src="<?= logoDataUrl ?>">
+        </div>
+        <div class="flex flex-col">
+          <span class="font-headline-md text-primary text-base leading-tight font-bold tracking-tight">INFOTEP</span>
+          <span class="font-label-bold text-on-surface-variant text-[10px] uppercase tracking-widest">QR Generator</span>
+        </div>
       </div>
-      <div class="flex flex-col">
-        <span class="font-headline-md text-primary text-[18px] leading-tight font-bold tracking-tight">INFOTEP</span>
-        <span class="font-label-bold text-on-surface-variant text-[10px] uppercase tracking-widest">QR Generator</span>
-      </div>
+      <!-- Close drawer on mobile -->
+      <button id="sidebar-close-btn" class="lg:hidden p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
     </div>
 
     <!-- Navigation Menu -->
@@ -61,57 +70,64 @@
   <!-- ========================================================================= -->
   <!-- MAIN CONTENT WRAPPER                                                      -->
   <!-- ========================================================================= -->
-  <div class="pl-72 flex flex-col min-h-screen">
+  <div class="pl-0 lg:pl-72 flex flex-col min-h-screen transition-all">
     
     <!-- Topbar Header -->
-    <header class="fixed top-0 left-72 right-0 h-20 bg-surface/85 backdrop-blur-xl z-40 border-b border-outline-variant/10 px-8 flex items-center justify-between shadow-sm">
-      <!-- Search Input -->
-      <div class="relative w-80">
-        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary text-[20px]">search</span>
-        <input id="top-search-input" type="text" placeholder="Buscar por campaña o destino..." class="w-full bg-surface-container-low pl-10 pr-4 py-2 rounded-xl text-xs text-on-surface placeholder:text-on-surface-variant/60 border border-outline-variant/20 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all">
+    <header class="fixed top-0 left-0 lg:left-72 right-0 h-20 bg-surface/90 backdrop-blur-xl z-30 border-b border-outline-variant/10 px-4 sm:px-8 flex items-center justify-between shadow-sm">
+      <div class="flex items-center gap-3">
+        <!-- Hamburger Menu Button on Mobile -->
+        <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center justify-center" title="Abrir Menú">
+          <span class="material-symbols-outlined text-[24px]">menu</span>
+        </button>
+
+        <!-- Search Input -->
+        <div class="relative w-48 sm:w-72 md:w-80">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary text-[18px]">search</span>
+          <input id="top-search-input" type="text" placeholder="Buscar campaña..." class="w-full bg-surface-container-low pl-9 pr-3 py-2 rounded-xl text-xs text-on-surface placeholder:text-on-surface-variant/60 border border-outline-variant/20 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all">
+        </div>
       </div>
 
       <!-- User Profile Badge -->
-      <div class="flex items-center gap-4">
-        <div class="flex flex-col text-right">
-          <span id="user-display-name" class="font-bold text-sm text-on-surface leading-tight">Cargando...</span>
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex flex-col text-right">
+          <span id="user-display-name" class="font-bold text-xs sm:text-sm text-on-surface leading-tight">Cargando...</span>
           <span id="user-display-role" class="text-[10px] text-secondary font-bold uppercase tracking-wider">Usuario</span>
         </div>
-        <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center border-2 border-primary-container shadow-md text-on-primary font-bold text-sm" id="user-avatar-initials">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary flex items-center justify-center border-2 border-primary-container shadow-md text-on-primary font-bold text-xs sm:text-sm" id="user-avatar-initials">
           IN
         </div>
       </div>
     </header>
 
-    <!-- Main Views Container -->
-    <main class="pt-24 px-8 pb-12 flex-1">
+    <!-- Main Content Area -->
+    <main class="pt-24 px-4 sm:px-8 pb-12 flex-1 max-w-7xl w-full mx-auto">
 
       <!-- ===================================================================== -->
       <!-- VIEW 1: DASHBOARD                                                     -->
       <!-- ===================================================================== -->
-      <section id="view-dashboard" class="flex flex-col gap-8">
+      <section id="view-dashboard" class="flex flex-col gap-6 sm:gap-8">
         <!-- Title & CTA Header -->
         <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
           <div class="flex flex-col gap-1">
-            <h1 class="font-headline-xl text-3xl font-bold text-on-background">Dashboard</h1>
-            <p class="font-body-lg text-sm text-on-surface-variant">Centro de Control de Códigos QR - Mercadeo</p>
+            <h1 class="font-headline-xl text-2xl sm:text-3xl font-bold text-on-background">Dashboard</h1>
+            <p class="font-body-lg text-xs sm:text-sm text-on-surface-variant">Centro de Control de Códigos QR - Mercadeo</p>
           </div>
-          <button onclick="navigateTo('generar-qr')" class="bg-secondary text-on-secondary font-bold text-xs uppercase px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 hover:bg-secondary-fixed hover:scale-105 active:scale-95 transition-all">
+          <button onclick="navigateTo('generar-qr')" class="w-full sm:w-auto bg-secondary text-on-secondary font-bold text-xs uppercase px-5 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-secondary-fixed hover:scale-105 active:scale-95 transition-all">
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
             Crear Nuevo QR
           </button>
         </div>
 
         <!-- 3 KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           <!-- Card 1: Total QRs -->
-          <div class="bg-surface-container rounded-2xl p-6 flex flex-col justify-between gap-4 relative overflow-hidden group shadow-md border border-outline-variant/10 hover:border-outline-variant/30 transition-all">
+          <div class="bg-surface-container rounded-2xl p-5 sm:p-6 flex flex-col justify-between gap-4 relative overflow-hidden group shadow-md border border-outline-variant/10 hover:border-outline-variant/30 transition-all">
             <div class="absolute top-0 right-0 p-4 opacity-15 group-hover:opacity-30 transition-opacity">
-              <span class="material-symbols-outlined text-[54px] text-primary">qr_code_2</span>
+              <span class="material-symbols-outlined text-[48px] sm:text-[54px] text-primary">qr_code_2</span>
             </div>
             <div class="flex flex-col z-10">
               <span class="font-bold text-xs text-on-surface-variant uppercase tracking-wider">QRs Generados</span>
-              <span id="dash-total-qrs" class="font-headline-xl text-3xl font-bold text-on-background mt-2">0</span>
+              <span id="dash-total-qrs" class="font-headline-xl text-2xl sm:text-3xl font-bold text-on-background mt-2">0</span>
             </div>
             <div class="flex items-center gap-1.5 z-10 text-tertiary text-xs font-semibold">
               <span class="material-symbols-outlined text-[16px]">trending_up</span>
@@ -123,15 +139,14 @@
           </div>
 
           <!-- Card 2: Total Scans -->
-          <div class="bg-primary-container rounded-2xl p-6 flex flex-col justify-between gap-4 relative overflow-hidden group shadow-md border border-primary/20 hover:border-primary/40 transition-all">
+          <div class="bg-primary-container rounded-2xl p-5 sm:p-6 flex flex-col justify-between gap-4 relative overflow-hidden group shadow-md border border-primary/20 hover:border-primary/40 transition-all">
             <div class="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-35 transition-opacity">
-              <span class="material-symbols-outlined text-[54px] text-on-primary-container">center_focus_strong</span>
+              <span class="material-symbols-outlined text-[48px] sm:text-[54px] text-on-primary-container">center_focus_strong</span>
             </div>
             <div class="flex flex-col z-10">
               <span class="font-bold text-xs text-on-primary-container uppercase tracking-wider">Escaneos Totales</span>
-              <span id="dash-total-scans" class="font-headline-xl text-3xl font-bold text-on-primary-container mt-2">0</span>
+              <span id="dash-total-scans" class="font-headline-xl text-2xl sm:text-3xl font-bold text-on-primary-container mt-2">0</span>
             </div>
-            <!-- Mini Bar Chart Visual -->
             <div class="w-full h-8 flex items-end gap-1.5 opacity-80 z-10">
               <div class="w-full bg-primary/40 h-[30%] rounded-t"></div>
               <div class="w-full bg-primary/60 h-[55%] rounded-t"></div>
@@ -143,16 +158,16 @@
           </div>
 
           <!-- Card 3: Dynamic Active QRs -->
-          <div class="bg-surface-container rounded-2xl p-6 flex flex-col justify-between gap-4 relative overflow-hidden group shadow-md border border-outline-variant/10 hover:border-outline-variant/30 transition-all">
+          <div class="bg-surface-container rounded-2xl p-5 sm:p-6 flex flex-col justify-between gap-4 relative overflow-hidden group shadow-md border border-outline-variant/10 hover:border-outline-variant/30 transition-all">
             <div class="absolute top-0 right-0 p-4 opacity-15 group-hover:opacity-30 transition-opacity">
-              <span class="material-symbols-outlined text-[54px] text-tertiary">sync</span>
+              <span class="material-symbols-outlined text-[48px] sm:text-[54px] text-tertiary">sync</span>
             </div>
             <div class="flex flex-col z-10">
               <span class="font-bold text-xs text-on-surface-variant uppercase tracking-wider">Dinámicos Activos</span>
-              <span id="dash-dynamic-count" class="font-headline-xl text-3xl font-bold text-on-background mt-2">0</span>
+              <span id="dash-dynamic-count" class="font-headline-xl text-2xl sm:text-3xl font-bold text-on-background mt-2">0</span>
             </div>
             <div class="flex items-center gap-3 z-10">
-              <div class="w-9 h-9 rounded-full border-3 border-surface-container-high border-t-tertiary animate-spin"></div>
+              <div class="w-8 h-8 rounded-full border-3 border-surface-container-high border-t-tertiary animate-spin"></div>
               <div class="flex flex-col">
                 <span id="dash-dynamic-pct" class="text-xs text-on-surface font-semibold">0% del total</span>
                 <span class="text-[10px] text-on-surface-variant font-bold uppercase">Rendimiento Óptimo</span>
@@ -166,7 +181,7 @@
           <!-- Recent Activity (2 cols) -->
           <div class="lg:col-span-2 flex flex-col gap-4">
             <div class="flex items-center justify-between">
-              <h2 class="font-headline-md text-lg font-bold text-on-background">Actividad Reciente</h2>
+              <h2 class="font-headline-md text-base sm:text-lg font-bold text-on-background">Actividad Reciente</h2>
               <button onclick="navigateTo('mis-codigos')" class="text-xs font-bold text-primary hover:text-primary-fixed transition-colors">VER TODOS</button>
             </div>
             <div id="dash-recent-list" class="flex flex-col gap-2.5">
@@ -176,19 +191,24 @@
 
           <!-- Quick Impact / Top Performing QR (1 col) -->
           <div class="lg:col-span-1 flex flex-col gap-4">
-            <h2 class="font-headline-md text-lg font-bold text-on-background">Impacto Rápido</h2>
-            <div id="dash-top-qr-card" class="bg-surface-container-low rounded-2xl p-6 flex flex-col justify-between h-full shadow-md border border-outline-variant/15 relative overflow-hidden">
-              <div class="flex items-start justify-between">
-                <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mayor Rendimiento</span>
+            <h2 class="font-headline-md text-base sm:text-lg font-bold text-on-background">Impacto Rápido</h2>
+            <div id="dash-top-qr-card" class="bg-surface-container-low rounded-2xl p-6 flex flex-col justify-between gap-4 shadow-md border border-outline-variant/15 relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Mayor Rendimiento</span>
                 <span class="material-symbols-outlined text-secondary text-[20px]">star</span>
               </div>
-              <div class="flex flex-col items-center text-center my-6">
-                <div id="dash-top-qr-thumb" class="w-28 h-28 bg-white rounded-2xl p-2 shadow-xl flex items-center justify-center rotate-2 hover:rotate-0 transition-transform">
+              
+              <!-- Clean centered thumbnail with NO text overlap -->
+              <div class="flex flex-col items-center text-center my-2 gap-3">
+                <div id="dash-top-qr-thumb" class="w-32 h-32 bg-white rounded-2xl p-2.5 shadow-xl flex items-center justify-center border border-outline-variant/20 hover:scale-105 transition-transform">
                   <span class="material-symbols-outlined text-primary text-4xl">qr_code_2</span>
                 </div>
-                <h3 id="dash-top-qr-name" class="font-headline-md text-base font-bold text-on-background mt-4">Promo Mercadeo</h3>
-                <p id="dash-top-qr-scans" class="font-body-sm text-xs text-on-surface-variant mt-0.5">0 Escaneos Registrados</p>
+                <div class="flex flex-col gap-0.5">
+                  <h3 id="dash-top-qr-name" class="font-headline-md text-base font-bold text-on-background leading-snug">Promo Mercadeo</h3>
+                  <p id="dash-top-qr-scans" class="font-body-sm text-xs text-tertiary font-semibold">0 Escaneos Registrados</p>
+                </div>
               </div>
+
               <button onclick="navigateTo('mis-codigos')" class="w-full bg-surface-container-high text-on-surface font-bold text-xs py-3 rounded-xl hover:bg-surface-container-highest transition-colors">
                 VER EN REPOSITORIO
               </button>
@@ -201,7 +221,7 @@
       <!-- VIEW 2: GENERAR QR (DUAL COLUMN LAYOUT)                               -->
       <!-- ===================================================================== -->
       <section id="view-generar-qr" class="hidden flex flex-col gap-6">
-        <div class="flex flex-col xl:flex-row w-full gap-8">
+        <div class="flex flex-col xl:flex-row w-full gap-6 sm:gap-8">
           
           <!-- LEFT COLUMN: FORM CONFIGURATION -->
           <div class="w-full xl:w-[48%] flex flex-col gap-6">
@@ -215,7 +235,7 @@
             </div>
 
             <!-- Form Card -->
-            <div class="bg-surface-container rounded-2xl p-6 shadow-lg border border-outline-variant/15 flex flex-col gap-5">
+            <div class="bg-surface-container rounded-2xl p-5 sm:p-6 shadow-lg border border-outline-variant/15 flex flex-col gap-5">
               <!-- Name Input -->
               <div class="flex flex-col gap-1.5">
                 <label for="qr-name" class="font-label-bold text-xs text-on-surface-variant uppercase tracking-wider">Nombre de la Campaña / Producto</label>
@@ -230,35 +250,32 @@
                 <label for="qr-url" class="font-label-bold text-xs text-on-surface-variant uppercase tracking-wider">URL de Destino</label>
                 <div class="relative flex items-center">
                   <span class="material-symbols-outlined absolute left-3.5 text-outline text-[20px]">link</span>
-                  <input id="qr-url" type="url" placeholder="https://infotep.gob.do/promo..." class="w-full bg-surface-container-low text-on-surface text-sm rounded-xl py-3 pl-11 pr-4 outline-none border border-outline-variant/20 focus:border-primary focus:ring-1 focus:ring-primary transition-all">
+                  <input id="qr-url" type="url" placeholder="https://instagram.com/infotep..." class="w-full bg-surface-container-low text-on-surface text-sm rounded-xl py-3 pl-11 pr-4 outline-none border border-outline-variant/20 focus:border-primary focus:ring-1 focus:ring-primary transition-all">
                 </div>
               </div>
 
-              <!-- Static vs Dynamic Toggle -->
+              <!-- Static vs Dynamic Selector -->
               <div class="flex flex-col gap-2 pt-2">
-                <span class="font-label-bold text-xs text-on-surface-variant uppercase tracking-wider">Tipo de Código QR</span>
-                <div class="grid grid-cols-2 gap-4">
-                  <!-- Static Radio -->
-                  <label class="relative flex flex-col p-4 rounded-xl bg-surface-container-low cursor-pointer border border-transparent hover:border-outline-variant/30 transition-all has-[:checked]:border-primary/50 has-[:checked]:bg-surface-container-high">
-                    <input type="radio" name="qr-type" value="static" class="peer sr-only">
-                    <div class="flex items-center gap-2 text-on-surface opacity-70 peer-checked:opacity-100 peer-checked:text-primary font-bold text-sm">
-                      <span class="material-symbols-outlined text-[18px]">lock</span>
-                      <span>Estático</span>
+                <span class="font-label-bold text-xs text-on-surface-variant uppercase tracking-wider">Modalidad de Enlace</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <!-- Static Radio (Direct Link) -->
+                  <label class="relative flex flex-col p-4 rounded-xl bg-surface-container-low cursor-pointer border border-transparent hover:border-outline-variant/30 transition-all has-[:checked]:border-secondary/60 has-[:checked]:bg-surface-container-high">
+                    <input type="radio" name="qr-type" value="static" checked class="peer sr-only">
+                    <div class="flex items-center gap-2 text-on-surface opacity-70 peer-checked:opacity-100 peer-checked:text-secondary font-bold text-sm">
+                      <span class="material-symbols-outlined text-[18px]">bolt</span>
+                      <span>Estático (Directo)</span>
                     </div>
-                    <span class="text-[11px] text-on-surface-variant/80 mt-1">La URL queda fija en el código físico.</span>
+                    <span class="text-[11px] text-on-surface-variant/80 mt-1">Lleva directamente a la URL de destino (Instagram, web). No requiere pasar por Apps Script.</span>
                   </label>
 
-                  <!-- Dynamic Radio (Recommended) -->
-                  <label class="relative flex flex-col p-4 rounded-xl bg-surface-container-low cursor-pointer border border-transparent hover:border-secondary/30 transition-all has-[:checked]:border-secondary/60 has-[:checked]:bg-surface-container-high">
-                    <input type="radio" name="qr-type" value="dynamic" checked class="peer sr-only">
-                    <div class="flex items-center gap-2 text-on-surface opacity-70 peer-checked:opacity-100 peer-checked:text-secondary font-bold text-sm">
+                  <!-- Dynamic Radio (Redirect & Tracking) -->
+                  <label class="relative flex flex-col p-4 rounded-xl bg-surface-container-low cursor-pointer border border-transparent hover:border-primary/30 transition-all has-[:checked]:border-primary/60 has-[:checked]:bg-surface-container-high">
+                    <input type="radio" name="qr-type" value="dynamic" class="peer sr-only">
+                    <div class="flex items-center gap-2 text-on-surface opacity-70 peer-checked:opacity-100 peer-checked:text-primary font-bold text-sm">
                       <span class="material-symbols-outlined text-[18px]">sync</span>
-                      <span>Dinámico</span>
+                      <span>Dinámico (Flexible)</span>
                     </div>
-                    <span class="text-[11px] text-on-surface-variant/80 mt-1">Permite cambiar la URL y medir escaneos.</span>
-                    <div class="absolute -top-2.5 right-3 bg-secondary text-on-secondary px-2 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider shadow-sm">
-                      Recomendado
-                    </div>
+                    <span class="text-[11px] text-on-surface-variant/80 mt-1">Permite cambiar la URL de destino luego y cuenta escaneos automáticamente.</span>
                   </label>
                 </div>
               </div>
@@ -266,18 +283,18 @@
 
             <!-- Micro Info Tip -->
             <div class="flex items-center gap-3 p-4 bg-surface-container/60 rounded-xl border border-outline-variant/10 text-xs text-on-surface-variant">
-              <span class="material-symbols-outlined text-tertiary text-[24px]">verified</span>
-              <span>Los códigos dinámicos no caducan y redirigen a través del servidor seguro institucional de INFOTEP.</span>
+              <span class="material-symbols-outlined text-tertiary text-[22px]">verified</span>
+              <span>Todos los códigos son permanentes y generados con Nivel H (30% de corrección de error) para máxima legibilidad.</span>
             </div>
           </div>
 
           <!-- RIGHT COLUMN: PERSONALIZATION & LIVE PREVIEW -->
           <div class="w-full xl:w-[52%] flex flex-col">
-            <div class="bg-surface-container-high/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 flex flex-col h-full shadow-2xl border border-outline-variant/15">
+            <div class="bg-surface-container-high/90 backdrop-blur-xl rounded-3xl p-5 sm:p-8 flex flex-col h-full shadow-2xl border border-outline-variant/15">
               
               <!-- Personalization Header & Formats -->
               <div class="flex justify-between items-center mb-6">
-                <h3 class="font-headline-md text-lg font-bold text-on-surface">Personalización</h3>
+                <h3 class="font-headline-md text-base sm:text-lg font-bold text-on-surface">Personalización</h3>
                 <!-- Format selector -->
                 <div class="flex bg-surface-container-low rounded-xl p-1 border border-outline-variant/20">
                   <button class="format-pill-btn px-3 py-1 rounded-lg font-bold text-xs bg-surface-container text-primary shadow-sm transition-all" data-format="PNG">PNG</button>
@@ -295,16 +312,11 @@
                   <div class="flex flex-col gap-2">
                     <span class="font-label-bold text-xs text-on-surface-variant uppercase tracking-wider">Color Principal</span>
                     <div class="flex items-center gap-2">
-                      <!-- Navy -->
-                      <button class="color-swatch-btn w-9 h-9 rounded-full bg-[#131360] border-2 border-outline-variant hover:scale-110 transition-transform shadow ring-2 ring-primary ring-offset-2 ring-offset-surface-container-high" data-color="#131360" title="Azul Marino Institucional"></button>
-                      <!-- Dark Navy -->
-                      <button class="color-swatch-btn w-9 h-9 rounded-full bg-[#111125] border-2 border-outline-variant hover:scale-110 transition-transform shadow" data-color="#111125" title="Navy Profundo"></button>
-                      <!-- Green -->
+                      <button class="color-swatch-btn w-9 h-9 rounded-full bg-[#131360] border-2 border-outline-variant hover:scale-110 transition-transform shadow ring-2 ring-primary ring-offset-2 ring-offset-surface-container-high" data-color="#131360" title="Azul Marino"></button>
+                      <button class="color-swatch-btn w-9 h-9 rounded-full bg-[#111125] border-2 border-outline-variant hover:scale-110 transition-transform shadow" data-color="#111125" title="Dark Navy"></button>
                       <button class="color-swatch-btn w-9 h-9 rounded-full bg-[#009c51] border-2 border-transparent hover:scale-110 transition-transform shadow" data-color="#009c51" title="Verde"></button>
-                      <!-- Yellow -->
                       <button class="color-swatch-btn w-9 h-9 rounded-full bg-[#ebc246] border-2 border-transparent hover:scale-110 transition-transform shadow" data-color="#ebc246" title="Amarillo"></button>
-                      <!-- Custom Picker -->
-                      <label class="w-9 h-9 rounded-full bg-surface-container-low border border-dashed border-outline-variant flex items-center justify-center cursor-pointer hover:border-primary transition-colors" title="Elegir otro color">
+                      <label class="w-9 h-9 rounded-full bg-surface-container-low border border-dashed border-outline-variant flex items-center justify-center cursor-pointer hover:border-primary transition-colors" title="Personalizar color">
                         <input id="custom-color-input" type="color" value="#131360" class="sr-only">
                         <span class="material-symbols-outlined text-outline text-[18px]">colorize</span>
                       </label>
@@ -319,10 +331,9 @@
                       </div>
                       <div class="flex flex-col">
                         <span class="font-bold text-xs text-on-surface">Logo INFOTEP</span>
-                        <span class="text-[10px] text-on-surface-variant">Centro del código</span>
+                        <span class="text-[10px] text-on-surface-variant">Centro protegido</span>
                       </div>
                     </div>
-                    <!-- Switch checkbox -->
                     <label class="relative inline-flex items-center cursor-pointer">
                       <input id="toggle-include-logo" type="checkbox" checked class="sr-only peer">
                       <div class="w-10 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-tertiary"></div>
@@ -345,37 +356,30 @@
                 </div>
 
                 <!-- Live Preview Display -->
-                <div class="flex flex-col items-center justify-center p-4">
-                  <div class="relative w-56 h-56 sm:w-64 sm:h-64 bg-surface rounded-2xl p-4 shadow-2xl flex items-center justify-center border border-outline-variant/20 group">
-                    <!-- Glow -->
-                    <div class="absolute inset-0 bg-primary/10 blur-xl rounded-full pointer-events-none"></div>
-                    <!-- Target Canvas -->
-                    <div id="qr-preview-target" class="w-full h-full relative z-10 flex items-center justify-center">
+                <div class="flex flex-col items-center justify-center p-2">
+                  <div class="relative w-52 h-52 sm:w-60 sm:h-60 bg-white rounded-2xl p-3 shadow-2xl flex items-center justify-center border border-outline-variant/20 group">
+                    <div id="qr-preview-target" class="w-full h-full relative z-10 flex items-center justify-center overflow-hidden">
                       <!-- Rendered dynamically -->
                     </div>
                     <!-- Animated Scanning Laser Beam -->
-                    <div class="absolute left-4 right-4 h-0.5 bg-tertiary shadow-[0_0_12px_rgba(97,222,138,0.9)] z-20 rounded-full animate-[scan_3s_ease-in-out_infinite] pointer-events-none"></div>
+                    <div class="absolute left-3 right-3 h-0.5 bg-tertiary shadow-[0_0_12px_rgba(97,222,138,0.9)] z-20 rounded-full animate-[scan_3s_ease-in-out_infinite] pointer-events-none"></div>
                   </div>
                 </div>
               </div>
 
               <!-- Action Buttons -->
-              <div class="mt-8 pt-6 border-t border-outline-variant/15 flex items-center justify-between">
-                <button onclick="document.getElementById('qr-name').value=''; document.getElementById('qr-url').value=''; updateLivePreview();" class="flex items-center gap-1.5 text-xs font-bold text-on-surface-variant hover:text-error transition-colors">
+              <div class="mt-8 pt-6 border-t border-outline-variant/15 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <button onclick="document.getElementById('qr-name').value=''; document.getElementById('qr-url').value=''; updateLivePreview();" class="flex items-center gap-1.5 text-xs font-bold text-on-surface-variant hover:text-error transition-colors order-2 sm:order-1">
                   <span class="material-symbols-outlined text-[18px]">restart_alt</span>
                   Restablecer
                 </button>
 
-                <div class="flex items-center gap-3">
-                  <button onclick="exportCurrentQR()" class="relative overflow-hidden group px-6 py-3 rounded-full bg-secondary text-primary-container font-bold text-xs uppercase tracking-wider shadow-lg hover:shadow-secondary/30 transition-all active:scale-95">
-                    <span class="relative z-10 flex items-center gap-2">
-                      <span class="material-symbols-outlined text-[18px]">download</span>
-                      Generar y Descargar
-                    </span>
-                    <!-- Shine -->
-                    <div class="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] group-hover:animate-[shine_1.5s_ease-out_infinite]"></div>
-                  </button>
-                </div>
+                <button onclick="exportCurrentQR()" class="w-full sm:w-auto relative overflow-hidden group px-6 py-3 rounded-full bg-secondary text-primary-container font-bold text-xs uppercase tracking-wider shadow-lg hover:shadow-secondary/30 transition-all active:scale-95 flex items-center justify-center gap-2 order-1 sm:order-2">
+                  <span class="material-symbols-outlined text-[18px]">download</span>
+                  Generar y Descargar
+                  <!-- Shine -->
+                  <div class="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] group-hover:animate-[shine_1.5s_ease-out_infinite]"></div>
+                </button>
               </div>
 
             </div>
@@ -392,7 +396,7 @@
           <div class="flex flex-col gap-1">
             <span class="text-[10px] font-bold text-secondary tracking-widest uppercase">Repositorio Institucional</span>
             <h2 class="font-headline-xl text-2xl font-bold text-on-surface">Mis Códigos QR</h2>
-            <p class="font-body-md text-xs text-on-surface-variant max-w-2xl">Gestiona tus campañas, edita los destinos dinámicos y descarga copias en alta resolución.</p>
+            <p class="font-body-md text-xs text-on-surface-variant max-w-2xl">Gestiona tus campañas, edita los destinos dinámicos y descarga recursos listos para impresión.</p>
           </div>
         </div>
 
@@ -405,28 +409,30 @@
           </div>
 
           <!-- Filter Pills -->
-          <div class="flex gap-1 bg-surface-container-high p-1 rounded-xl">
-            <button class="repo-filter-btn px-4 py-1.5 rounded-lg font-bold text-xs bg-secondary text-on-secondary shadow-md transition-all" data-filter="TODOS">Todos</button>
-            <button class="repo-filter-btn px-4 py-1.5 rounded-lg font-bold text-xs text-on-surface-variant hover:text-on-surface transition-all" data-filter="DINAMICOS">Dinámicos</button>
-            <button class="repo-filter-btn px-4 py-1.5 rounded-lg font-bold text-xs text-on-surface-variant hover:text-on-surface transition-all" data-filter="ESTATICOS">Estáticos</button>
+          <div class="flex gap-1 bg-surface-container-high p-1 rounded-xl w-full sm:w-auto justify-center">
+            <button class="repo-filter-btn px-4 py-1.5 rounded-lg font-bold text-xs bg-secondary text-on-secondary shadow-md transition-all flex-1 sm:flex-initial" data-filter="TODOS">Todos</button>
+            <button class="repo-filter-btn px-4 py-1.5 rounded-lg font-bold text-xs text-on-surface-variant hover:text-on-surface transition-all flex-1 sm:flex-initial" data-filter="DINAMICOS">Dinámicos</button>
+            <button class="repo-filter-btn px-4 py-1.5 rounded-lg font-bold text-xs text-on-surface-variant hover:text-on-surface transition-all flex-1 sm:flex-initial" data-filter="ESTATICOS">Estáticos</button>
           </div>
         </div>
 
-        <!-- Table Container -->
+        <!-- Table Container (Horizontal scroll on mobile) -->
         <div class="flex flex-col w-full bg-surface-container-low rounded-2xl shadow-xl overflow-hidden border border-outline-variant/15">
-          <!-- Table Header -->
-          <div class="grid grid-cols-12 gap-4 p-4 bg-surface-container-lowest text-on-surface-variant font-bold text-[11px] uppercase tracking-wider border-b border-outline-variant/10">
-            <div class="col-span-1 text-center">QR</div>
-            <div class="col-span-3">Campaña</div>
-            <div class="col-span-2">Tipo</div>
-            <div class="col-span-3">Destino Actual</div>
-            <div class="col-span-1">Creado</div>
-            <div class="col-span-2 text-right">Acciones</div>
-          </div>
+          <div class="overflow-x-auto min-w-full">
+            <!-- Table Header -->
+            <div class="grid grid-cols-12 gap-4 p-4 bg-surface-container-lowest text-on-surface-variant font-bold text-[11px] uppercase tracking-wider border-b border-outline-variant/10 min-w-[700px]">
+              <div class="col-span-1 text-center">QR</div>
+              <div class="col-span-3">Campaña</div>
+              <div class="col-span-2">Tipo</div>
+              <div class="col-span-3">Destino Actual</div>
+              <div class="col-span-1">Creado</div>
+              <div class="col-span-2 text-right">Acciones</div>
+            </div>
 
-          <!-- Dynamic Table Rows -->
-          <div id="qrs-table-body" class="flex flex-col divide-y divide-outline-variant/10">
-            <!-- Populated via JS -->
+            <!-- Dynamic Table Rows -->
+            <div id="qrs-table-body" class="flex flex-col divide-y divide-outline-variant/10 min-w-[700px]">
+              <!-- Populated via JS -->
+            </div>
           </div>
 
           <!-- Table Footer -->
@@ -446,7 +452,7 @@
             <h2 class="font-headline-xl text-2xl font-bold text-on-background">Gestión de Usuarios</h2>
             <p class="font-body-md text-xs text-on-surface-variant">Administra el acceso y los roles de tu equipo institucional.</p>
           </div>
-          <button onclick="openAddUserModal()" class="bg-secondary text-on-secondary font-bold text-xs uppercase px-5 py-3 rounded-xl shadow-md hover:bg-secondary-fixed transition-all flex items-center gap-2">
+          <button onclick="openAddUserModal()" class="w-full sm:w-auto bg-secondary text-on-secondary font-bold text-xs uppercase px-5 py-3 rounded-xl shadow-md hover:bg-secondary-fixed transition-all flex items-center justify-center gap-2">
             <span class="material-symbols-outlined text-[18px]">person_add</span>
             Agregar Usuario
           </button>
@@ -455,8 +461,8 @@
         <!-- Table Card -->
         <div class="bg-surface-container rounded-2xl shadow-xl overflow-hidden border border-outline-variant/15 flex flex-col">
           <!-- Toolbar -->
-          <div class="px-6 py-4 flex items-center justify-between bg-surface-container-high border-b border-outline-variant/10">
-            <div class="relative w-72">
+          <div class="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-surface-container-high border-b border-outline-variant/10">
+            <div class="relative w-full sm:w-72">
               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
               <input id="users-search-input" type="text" placeholder="Buscar colaborador..." class="w-full bg-surface pl-9 pr-4 py-2 rounded-xl text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-secondary">
             </div>
@@ -464,8 +470,8 @@
           </div>
 
           <!-- Table -->
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+          <div class="overflow-x-auto min-w-full">
+            <table class="w-full text-left border-collapse min-w-[650px]">
               <thead>
                 <tr class="bg-surface-container-lowest text-on-surface-variant font-bold text-[11px] uppercase tracking-wider border-b border-outline-variant/10">
                   <th class="px-6 py-3.5">Colaborador</th>
@@ -493,7 +499,6 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Card 1: App Info -->
           <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col gap-4 shadow-md">
             <h3 class="font-bold text-sm text-primary uppercase tracking-wider">Información de la Aplicación</h3>
             <div class="flex flex-col gap-2.5 text-xs text-on-surface-variant">
@@ -512,7 +517,6 @@
             </div>
           </div>
 
-          <!-- Card 2: Database Initialization -->
           <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col justify-between gap-4 shadow-md">
             <div class="flex flex-col gap-2">
               <h3 class="font-bold text-sm text-secondary uppercase tracking-wider">Mantenimiento de Datos</h3>
@@ -529,6 +533,61 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: REDESIGNED QR PREVIEW & HIGH-RES VIEW (FIXES SCREENSHOT 1)          -->
+  <!-- ========================================================================= -->
+  <div id="qr-preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/85 backdrop-blur-md">
+    <div class="bg-surface-container p-6 sm:p-8 rounded-3xl shadow-2xl max-w-md w-full flex flex-col gap-5 border border-outline-variant/20 relative animate-modal">
+      
+      <!-- Top Modal Header -->
+      <div class="flex items-start justify-between">
+        <div class="flex flex-col gap-0.5">
+          <span id="qr-preview-modal-type-chip" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary/15 text-secondary self-start uppercase">QR ESTÁTICO</span>
+          <h3 id="qr-preview-modal-title" class="font-headline-md text-lg font-bold text-on-surface mt-1">Campaña Institucional</h3>
+        </div>
+        <button onclick="closePreviewModal()" class="text-on-surface-variant hover:text-on-surface p-1.5 rounded-full hover:bg-surface-container-high transition-colors" title="Cerrar">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <!-- Centered QR Box (Pure White with shadow) -->
+      <div class="bg-white rounded-2xl p-4 shadow-xl flex items-center justify-center mx-auto border border-outline-variant/15">
+        <div id="qr-preview-modal-canvas" class="w-56 h-56 flex items-center justify-center">
+          <!-- Canvas injected dynamically -->
+        </div>
+      </div>
+
+      <!-- Info Details Card -->
+      <div class="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/10 flex flex-col gap-1.5 text-xs">
+        <div class="flex items-center justify-between text-on-surface-variant">
+          <span class="font-label-bold uppercase text-[10px]">Destino del enlace:</span>
+          <span id="qr-preview-modal-scan-count" class="text-tertiary font-bold text-[10px]">Directo</span>
+        </div>
+        <a id="qr-preview-modal-link" href="#" target="_blank" class="text-xs text-primary underline truncate hover:text-primary-fixed flex items-center gap-1" title="Abrir enlace">
+          <span id="qr-preview-modal-link-text">https://infotep.gob.do</span>
+          <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+        </a>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="grid grid-cols-3 gap-2.5 w-full pt-1">
+        <button id="btn-modal-download-png" class="bg-secondary text-on-secondary font-bold text-xs py-3 px-2 rounded-xl shadow hover:bg-secondary-fixed transition-all flex items-center justify-center gap-1.5" title="Descargar en formato PNG 1200px">
+          <span class="material-symbols-outlined text-[16px]">image</span>
+          PNG
+        </button>
+        <button id="btn-modal-download-svg" class="bg-surface-container-high text-on-surface font-bold text-xs py-3 px-2 rounded-xl hover:bg-surface-container-highest transition-all flex items-center justify-center gap-1.5 border border-outline-variant/20" title="Descargar Vector SVG">
+          <span class="material-symbols-outlined text-[16px]">polyline</span>
+          SVG
+        </button>
+        <button id="btn-modal-download-pdf" class="bg-surface-container-high text-on-surface font-bold text-xs py-3 px-2 rounded-xl hover:bg-surface-container-highest transition-all flex items-center justify-center gap-1.5 border border-outline-variant/20" title="Descargar PDF Impresión">
+          <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+          PDF
+        </button>
+      </div>
+
+    </div>
   </div>
 
   <!-- ========================================================================= -->
@@ -596,31 +655,6 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: QR PREVIEW & HIGH-RES VIEW                                         -->
-  <!-- ========================================================================= -->
-  <div id="qr-preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/85 backdrop-blur-md">
-    <div class="bg-surface-container p-6 sm:p-8 rounded-3xl shadow-2xl max-w-md w-full flex flex-col items-center gap-5 border border-outline-variant/20 relative animate-modal">
-      <button onclick="closePreviewModal()" class="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface">
-        <span class="material-symbols-outlined text-[20px]">close</span>
-      </button>
-      <h3 id="qr-preview-modal-title" class="font-headline-md text-lg font-bold text-on-surface text-center">Campaña</h3>
-      <div id="qr-preview-modal-canvas" class="w-64 h-64 bg-white rounded-2xl p-3 shadow-2xl flex items-center justify-center">
-        <!-- Canvas injected dynamically -->
-      </div>
-      <a id="qr-preview-modal-link" href="#" target="_blank" class="text-xs text-primary underline truncate max-w-full text-center"></a>
-      <div class="flex gap-3 w-full mt-2">
-        <button id="btn-modal-download-png" class="flex-1 bg-secondary text-on-secondary font-bold text-xs py-3 rounded-xl shadow hover:bg-secondary-fixed transition-all flex items-center justify-center gap-2">
-          <span class="material-symbols-outlined text-[18px]">download</span>
-          Descargar PNG
-        </button>
-        <button onclick="closePreviewModal()" class="px-5 py-3 bg-surface-container-high text-on-surface font-bold text-xs rounded-xl hover:bg-surface-container-highest transition-colors">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
   <!-- GENERIC CONFIRMATION / ALERT MODAL                                        -->
   <!-- ========================================================================= -->
   <div id="generic-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
@@ -655,7 +689,6 @@
   <!-- App Bootstrap Invocator -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // Initialize application directly with server bootstrapped payload
       try {
         const currentUser = JSON.parse(<?= JSON.stringify(currentUserJson || "{}") ?>);
         google.script.run
@@ -664,7 +697,6 @@
           })
           .withFailureHandler((err) => {
             console.error("Bootstrap error:", err);
-            // Fallback initialization with current user
             initApp({
               version: "<?= appVersion ?>",
               user: currentUser,

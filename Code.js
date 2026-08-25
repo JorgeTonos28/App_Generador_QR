@@ -6,12 +6,9 @@
  * Backend Controller & REST-like API for Google Apps Script
  */
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 const DEFAULT_PRIMARY_COLOR = "#131360";
 const DEFAULT_SECONDARY_COLOR = "#ebc246";
-
-// Fallback Logo SVG (INFOTEP Isotipo) if Drive file is not configured
-const FALLBACK_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="240" fill="%23131360"/><path d="M120,250 A130,130 0 1,1 380,250 A130,130 0 1,1 120,250" fill="none" stroke="%23ebc246" stroke-width="28" stroke-dasharray="30 15"/><path d="M180,230 L220,180 L300,210 L340,280 L280,330 L200,310 Z" fill="%23009c51"/><text x="250" y="440" font-family="sans-serif" font-size="52" font-weight="900" fill="%23ffffff" text-anchor="middle">INFOTEP</text></svg>`;
 
 /**
  * Inclusion helper for Apps Script HTML templates
@@ -144,7 +141,7 @@ function getConfigMap_() {
 }
 
 /**
- * Resolves Base64 Data URL for institutional logo from Drive or Fallback
+ * Resolves Base64 Data URL for institutional logo from Drive or Fallback Assets
  */
 function getLogoDataUrl_() {
   const config = getConfigMap_();
@@ -160,7 +157,11 @@ function getLogoDataUrl_() {
       Logger.log("Error reading logo from Drive ID: " + e.message);
     }
   }
-  return FALLBACK_LOGO_SVG;
+  // Return authentic official INFOTEP color logo
+  if (typeof APP_INFOTEP_LOGO_COLOR !== "undefined" && APP_INFOTEP_LOGO_COLOR) {
+    return APP_INFOTEP_LOGO_COLOR;
+  }
+  return "";
 }
 
 /**
@@ -593,7 +594,8 @@ function apiSaveQR(payload) {
     
     const config = getConfigMap_();
     const webAppUrl = config["WEBAPP_URL"] || ScriptApp.getService().getUrl() || "";
-    const shortUrl = type === "DINAMICO" ? (webAppUrl ? `${webAppUrl}?r=${id}` : `?r=${id}`) : payload.targetUrl;
+    // If static, shortUrl is exact targetUrl. If dynamic, shortUrl is webAppUrl?r=id
+    const shortUrl = type === "DINAMICO" ? (webAppUrl ? `${webAppUrl}?r=${id}` : `?r=${id}`) : payload.targetUrl.trim();
 
     const rowData = [
       id,

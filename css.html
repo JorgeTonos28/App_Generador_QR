@@ -79,6 +79,7 @@
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   /* Custom scrollbar */
@@ -99,10 +100,10 @@
 
   /* Laser scan line animation */
   @keyframes scan {
-    0% { top: 10%; opacity: 0; }
+    0% { top: 12%; opacity: 0; }
     15% { opacity: 1; }
     85% { opacity: 1; }
-    100% { top: 88%; opacity: 0; }
+    100% { top: 86%; opacity: 0; }
   }
 
   /* Button shine animation */
@@ -114,7 +115,7 @@
   @keyframes modalFadeIn {
     from {
       opacity: 0;
-      transform: scale(0.96) translateY(8px);
+      transform: scale(0.95) translateY(12px);
     }
     to {
       opacity: 1;
@@ -126,25 +127,14 @@
     animation: modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
-  /* Glassmorphism utility */
-  .glass-panel {
-    background: rgba(30, 30, 50, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(145, 143, 156, 0.15);
-  }
-
-  .glass-card {
-    background: rgba(26, 26, 46, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(70, 70, 81, 0.25);
-  }
-
-  /* Mobile iframe breakout helper */
-  @media (max-width: 768px) {
-    .sidebar-mobile-hidden {
-      display: none;
+  /* Sidebar Drawer on Mobile */
+  @media (max-width: 1023px) {
+    #main-sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #main-sidebar.open {
+      transform: translateX(0);
     }
   }
 </style>
