@@ -13,15 +13,11 @@
   <!-- ========================================================================= -->
   <div id="initial-loading-screen" class="fixed inset-0 z-[100] bg-[#111125] flex flex-col items-center justify-center gap-6 transition-opacity duration-300">
     <div class="relative flex items-center justify-center">
-      <!-- Outer glowing spinner -->
-      <div class="w-20 h-20 border-4 border-[#1e1e38] border-t-[#ebc246] border-r-[#009c51] rounded-full animate-spin"></div>
-      <!-- Center instant vector emblem -->
-      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <svg class="w-10 h-10 text-[#c0c1ff]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="44" stroke="#ebc246" stroke-width="4" stroke-dasharray="180 80"/>
-          <circle cx="50" cy="50" r="28" fill="#131360" stroke="#009c51" stroke-width="3"/>
-          <path d="M50 34V66M34 50H66" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
-        </svg>
+      <div class="w-24 h-24 border-4 border-[#1e1e38] border-t-[#ebc246] border-r-[#009c51] rounded-full animate-spin"></div>
+      <div class="absolute inset-0 flex items-center justify-center p-3">
+        <div class="w-14 h-14 bg-white rounded-2xl p-2 flex items-center justify-center shadow-lg border border-[#ebc246]/50">
+          <img src="<?= logoDataUrl ?>" class="w-full h-full object-contain" alt="INFOTEP">
+        </div>
       </div>
     </div>
     
