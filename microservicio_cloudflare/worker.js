@@ -14,8 +14,9 @@
 
 // CONFIGURACIÓN:
 // Pega aquí la URL completa que te dio Google al "Publicar en la web" como CSV
-// O simplemente pon el SPREADSHEET_ID
 let PUBLISHED_CSV_URL = "";
+
+// Opcional: ID de tu hoja de cálculo
 let SPREADSHEET_ID = "";
 
 export default {
@@ -44,55 +45,37 @@ export default {
     }
 
     try {
-      let urlsToTry = [];
+      let fetchUrl = PUBLISHED_CSV_URL;
       
-      if (PUBLISHED_CSV_URL && PUBLISHED_CSV_URL.startsWith("http")) {
-        urlsToTry.push(PUBLISHED_CSV_URL);
-      }
-      
-      if (SPREADSHEET_ID && SPREADSHEET_ID.length > 10) {
-        urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=QRs`);
-        urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&sheet=QRs`);
-        urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv`);
+      if (!fetchUrl && SPREADSHEET_ID) {
+        fetchUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=QRs`;
       }
 
-      let csvText = "";
-      let lastStatus = 0;
-
-      for (const targetFetchUrl of urlsToTry) {
-        try {
-          const res = await fetch(targetFetchUrl, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              "Accept": "text/csv,text/plain,*/*"
-            },
-            cf: {
-              cacheTtl: 5,
-              cacheEverything: true
-            }
-          });
-          
-          lastStatus = res.status;
-          if (res.ok) {
-            const txt = await res.text();
-            if (txt && !txt.includes("<!DOCTYPE html") && !txt.includes("<html")) {
-              csvText = txt;
-              break;
-            }
-          }
-        } catch(e) {}
+      if (!fetchUrl) {
+        return new Response(getNotFoundHtml("No se ha configurado la variable PUBLISHED_CSV_URL en el Worker."), {
+          status: 500,
+          headers: { "Content-Type": "text/html;charset=UTF-8" }
+        });
       }
 
-      if (!csvText) {
-        return new Response(getNotFoundHtml(
-          `No se pudo leer la hoja de cálculo (Estado HTTP: ${lastStatus}).<br><br>` +
-          `Asegúrate de haber publicado la pestaña <strong>QRs</strong> como CSV en Google Sheets.`
-        ), {
+      // Descargar el CSV siguiendo redirecciones 307 de Google
+      const res = await fetch(fetchUrl, {
+        method: "GET",
+        redirect: "follow",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept": "text/csv,text/plain,*/*"
+        }
+      });
+
+      if (!res.ok) {
+        return new Response(getNotFoundHtml(`Google Sheets respondió con error HTTP ${res.status}: ${res.statusText}`), {
           status: 502,
           headers: { "Content-Type": "text/html;charset=UTF-8" }
         });
       }
 
+      const csvText = await res.text();
       const rows = parseCSV(csvText);
 
       // Buscar el QR por ID (Columna 0 = ID, Columna 3 = Destino, Columna 9 = Estado)
@@ -121,7 +104,7 @@ export default {
       }
 
       // Si no existe o está inactivo
-      return new Response(getNotFoundHtml(`El código QR <code>${qrId}</code> no existe o se encuentra inactivo.`), {
+      return new Response(getNotFoundHtml(`El código QR <code>${qrId}</code> no fue encontrado en la base de datos o está inactivo.`), {
         status: 404,
         headers: { "Content-Type": "text/html;charset=UTF-8" }
       });
@@ -136,7 +119,7 @@ export default {
 };
 
 /**
- * Parser de CSV robusto y seguro
+ * Parser de CSV robusto para Google Sheets
  */
 function parseCSV(text) {
   const lines = text.split(/\r?\n/);
