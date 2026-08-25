@@ -9,8 +9,12 @@
  * exclusivamente para procesar las redirecciones de códigos QR dinámicos
  * y contabilizar escaneos.
  *
- * NOTA: NO agregar este archivo en el proyecto de la App Principal.
- * Debe crearse como un proyecto nuevo en script.google.com llamado "Redireccionador".
+ * CONFIGURACIÓN:
+ * 1. Pega este código en Código.gs de un proyecto nuevo en Apps Script.
+ * 2. Asigna el ID de tu Google Sheet en SPREADSHEET_ID.
+ * 3. Implementa como Aplicación Web:
+ *    - Ejecutar como: "Yo" (tu cuenta)
+ *    - Quién tiene acceso: "Cualquier persona" (Anyone)
  */
 
 // Configura aquí el ID de la hoja de cálculo de Google Sheets compartida
@@ -34,12 +38,10 @@ function doGet(e) {
     `).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  // 1. Check ultra-fast cache first
-  const cache = CacheService.getScriptCache();
-  let targetUrl = cache.get("QR_TARGET_" + qrId);
+  let targetUrl = "";
 
-  // 2. If not in cache, query shared Google Sheet
-  if (!targetUrl && SPREADSHEET_ID) {
+  // Query shared Google Sheet directly to guarantee 100% real-time instant edits
+  if (SPREADSHEET_ID) {
     try {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       const qrsSheet = ss.getSheetByName("QRs");
@@ -50,9 +52,6 @@ function doGet(e) {
           const status = String(rows[i][9] || "").toUpperCase().trim();
           if (id === qrId && status === "ACTIVO") {
             targetUrl = String(rows[i][3] || "").trim();
-            if (targetUrl) {
-              cache.put("QR_TARGET_" + qrId, targetUrl, 600); // 10 minutes cache
-            }
 
             // Register scan metric
             try {
@@ -80,14 +79,13 @@ function doGet(e) {
     }
   }
 
-  // 3. Return high-speed instant redirect
+  // Break out of iframe sandbox so Facebook, Instagram, YouTube NEVER reject connection
   if (targetUrl) {
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="0;url=${targetUrl}">
   <title>Redirigiendo... | INFOTEP</title>
   <style>
     body { background-color: #111125; color: #e2e0fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
@@ -96,17 +94,25 @@ function doGet(e) {
     @keyframes spin { to { transform: rotate(360deg); } }
     h2 { font-size: 20px; margin: 0 0 8px; color: #c0c1ff; font-weight: 600; }
     p { font-size: 14px; margin: 0; color: #c7c5d2; }
-    a { color: #ebc246; text-decoration: none; word-break: break-all; }
+    a { color: #ebc246; text-decoration: none; word-break: break-all; font-weight: bold; }
   </style>
   <script>
-    window.location.replace(${JSON.stringify(targetUrl)});
+    (function() {
+      var dest = ${JSON.stringify(targetUrl)};
+      // CRITICAL: Top-level breakout from Apps Script sandboxed iframe
+      if (window.top && window.top !== window) {
+        window.top.location.href = dest;
+      } else {
+        window.location.href = dest;
+      }
+    })();
   </script>
 </head>
 <body>
   <div class="loader-card">
     <div class="spinner"></div>
     <h2>Redirigiendo...</h2>
-    <p>Si no eres redirigido automáticamente, <a href="${targetUrl}">haz clic aquí</a>.</p>
+    <p>Si no eres redirigido automáticamente, <a href="${targetUrl}" target="_top">haz clic aquí</a>.</p>
   </div>
 </body>
 </html>`;

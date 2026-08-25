@@ -6,7 +6,7 @@
  * Backend Controller & REST-like API for Google Apps Script
  */
 
-const APP_VERSION = "1.3.1";
+const APP_VERSION = "1.3.2";
 const DEFAULT_PRIMARY_COLOR = "#131360";
 const DEFAULT_SECONDARY_COLOR = "#ebc246";
 
@@ -307,7 +307,6 @@ function handleQrRedirect_(qrId, e) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="0;url=${targetUrl}">
   <title>Redirigiendo... | INFOTEP</title>
   <style>
     body { background-color: #111125; color: #e2e0fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
@@ -316,17 +315,24 @@ function handleQrRedirect_(qrId, e) {
     @keyframes spin { to { transform: rotate(360deg); } }
     h2 { font-size: 20px; margin: 0 0 8px; color: #c0c1ff; font-weight: 600; }
     p { font-size: 14px; margin: 0; color: #c7c5d2; }
-    a { color: #ebc246; text-decoration: none; word-break: break-all; }
+    a { color: #ebc246; text-decoration: none; word-break: break-all; font-weight: bold; }
   </style>
   <script>
-    window.location.replace(${JSON.stringify(targetUrl)});
+    (function() {
+      var dest = ${JSON.stringify(targetUrl)};
+      if (window.top && window.top !== window) {
+        window.top.location.href = dest;
+      } else {
+        window.location.href = dest;
+      }
+    })();
   </script>
 </head>
 <body>
   <div class="loader-card">
     <div class="spinner"></div>
     <h2>Redirigiendo...</h2>
-    <p>Si no eres redirigido automáticamente, <a href="${targetUrl}">haz clic aquí</a>.</p>
+    <p>Si no eres redirigido automáticamente, <a href="${targetUrl}" target="_top">haz clic aquí</a>.</p>
   </div>
 </body>
 </html>`;
