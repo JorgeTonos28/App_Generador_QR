@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Denegado - INFOTEP Generador QR</title>
+  <?!= include('css'); ?>
+</head>
+<body class="bg-background min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-surface-container rounded-2xl p-8 border border-outline-variant/20 shadow-2xl text-center flex flex-col items-center gap-6">
+    <!-- Icon / Badge -->
+    <div class="w-20 h-20 rounded-full bg-error-container/30 border border-error/40 flex items-center justify-center text-error">
+      <span class="material-symbols-outlined text-[42px]">lock</span>
+    </div>
+
+    <!-- Title & Description -->
+    <div class="flex flex-col gap-2">
+      <h1 class="font-headline-md text-2xl text-on-surface font-bold">Acceso Restringido</h1>
+      <p class="font-body-md text-sm text-on-surface-variant">
+        Tu cuenta institucional no tiene permisos activos para acceder al Generador de Códigos QR de Mercadeo.
+      </p>
+    </div>
+
+    <!-- User Information Card -->
+    <div class="w-full bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 text-left flex flex-col gap-2 text-xs">
+      <div class="flex justify-between items-center">
+        <span class="text-on-surface-variant font-label-bold uppercase">Cuenta:</span>
+        <span class="text-on-surface font-medium truncate max-w-[200px]"><?= userEmail || 'No identificada' ?></span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-on-surface-variant font-label-bold uppercase">Estado:</span>
+        <span class="px-2 py-0.5 rounded-full bg-error/20 text-error font-bold uppercase text-[10px]"><?= userStatus || 'INACTIVO' ?></span>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <p class="font-body-sm text-xs text-on-surface-variant/80">
+      Si consideras que esto es un error o necesitas autorización para generar QRs de campañas institucionales, solicita acceso al <strong>Departamento de Mercadeo y Comunicaciones</strong>.
+    </p>
+
+    <!-- Actions -->
+    <div class="flex flex-col sm:flex-row gap-3 w-full">
+      <a href="mailto:mercadeo@infotep.gob.do?subject=Solicitud%20de%20Acceso%20App%20QR%20Generator&body=Solicito%20acceso%20para%20la%20cuenta:%20<?= userEmail ?>" 
+         class="flex-1 bg-secondary text-on-secondary font-label-bold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-secondary-fixed transition-colors shadow-md">
+        <span class="material-symbols-outlined text-[18px]">mail</span>
+        Solicitar Acceso
+      </a>
+      <button onclick="window.location.reload();" 
+              class="px-4 py-3 bg-surface-container-high text-on-surface font-label-bold text-sm rounded-xl hover:bg-surface-container-highest transition-colors">
+        Reintentar
+      </button>
+    </div>
+  </div>
+</body>
+</html>

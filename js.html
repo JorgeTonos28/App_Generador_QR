@@ -1,0 +1,1231 @@
+<!-- QR Code Generator & jsPDF Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script>
+/**
+ * ============================================================================
+ * INFOTEP QR Generator - Client Application Controller
+ * ============================================================================
+ */
+
+// Application Global State
+const state = {
+  version: "1.0.0",
+  user: null,
+  config: {},
+  dashboard: {},
+  qrs: [],
+  users: [],
+  currentView: "dashboard",
+  qrFilter: "TODOS",
+  qrSearch: "",
+  userSearch: "",
+  selectedColor: "#131360",
+  selectedFormat: "PNG",
+  selectedFrame: "BASICO",
+  includeLogo: true,
+  logoDataUrl: "",
+  webAppUrl: "",
+  previewCanvas: null,
+  cachedQrPreviews: new Map()
+};
+
+// ============================================================================
+// BUSY / LOADING CONTROLLER (With Counter Pattern)
+// ============================================================================
+const Busy = {
+  count: 0,
+  overlay: null,
+  textEl: null,
+
+  init() {
+    this.overlay = document.getElementById("global-busy-overlay");
+    this.textEl = document.getElementById("global-busy-text");
+  },
+
+  show(message = "Procesando...") {
+    this.count++;
+    if (this.textEl) this.textEl.textContent = message;
+    if (this.overlay) {
+      this.overlay.classList.remove("hidden");
+      this.overlay.classList.add("flex");
+    }
+  },
+
+  hide() {
+    this.count = Math.max(0, this.count - 1);
+    if (this.count === 0 && this.overlay) {
+      this.overlay.classList.add("hidden");
+      this.overlay.classList.remove("flex");
+    }
+  },
+
+  reset() {
+    this.count = 0;
+    if (this.overlay) {
+      this.overlay.classList.add("hidden");
+      this.overlay.classList.remove("flex");
+    }
+  }
+};
+
+// ============================================================================
+// TOAST & MODAL FEEDBACK SYSTEM
+// ============================================================================
+function showToast(message, type = "success") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  const isSuccess = type === "success";
+  const isError = type === "error";
+
+  toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${
+    isSuccess
+      ? "bg-[#00260f] text-[#61de8a] border-[#009c51]/40"
+      : isError
+      ? "bg-[#93000a]/90 text-[#ffdad6] border-[#ffb4ab]/40"
+      : "bg-surface-container-highest text-on-surface border-outline-variant/30"
+  }`;
+
+  const icon = isSuccess ? "check_circle" : isError ? "error" : "info";
+  toast.innerHTML = `
+    <span class="material-symbols-outlined text-[20px]">${icon}</span>
+    <span>${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Trigger animation
+  requestAnimationFrame(() => {
+    toast.classList.remove("translate-y-2", "opacity-0");
+    toast.classList.add("translate-y-0", "opacity-100");
+  });
+
+  setTimeout(() => {
+    toast.classList.remove("translate-y-0", "opacity-100");
+    toast.classList.add("-translate-y-2", "opacity-0");
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+function showModal(options) {
+  const modalEl = document.getElementById("generic-modal");
+  const titleEl = document.getElementById("generic-modal-title");
+  const messageEl = document.getElementById("generic-modal-message");
+  const confirmBtn = document.getElementById("generic-modal-confirm");
+  const cancelBtn = document.getElementById("generic-modal-cancel");
+
+  if (!modalEl) return;
+
+  titleEl.textContent = options.title || "Confirmación";
+  messageEl.textContent = options.message || "¿Desea continuar?";
+
+  if (options.confirmText) confirmBtn.textContent = options.confirmText;
+  if (options.cancelText) cancelBtn.textContent = options.cancelText;
+
+  confirmBtn.className = `px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md ${
+    options.danger
+      ? "bg-error text-on-error hover:bg-error-container"
+      : "bg-secondary text-on-secondary hover:bg-secondary-fixed"
+  }`;
+
+  const cleanup = () => {
+    modalEl.classList.add("hidden");
+    confirmBtn.onclick = null;
+    cancelBtn.onclick = null;
+  };
+
+  confirmBtn.onclick = () => {
+    cleanup();
+    if (typeof options.onConfirm === "function") options.onConfirm();
+  };
+
+  cancelBtn.onclick = () => {
+    cleanup();
+    if (typeof options.onCancel === "function") options.onCancel();
+  };
+
+  modalEl.classList.remove("hidden");
+}
+
+// ============================================================================
+// QR CODE GENERATION ENGINE (Error Correction Level H + Logo Overlay)
+// ============================================================================
+
+/**
+ * Creates and renders the complete QR Code on Canvas with Level H error correction and centered INFOTEP logo
+ */
+function generateQRCodeCanvas(text, options = {}) {
+  const size = options.size || 1024;
+  const color = options.color || state.selectedColor || "#131360";
+  const hasLogo = options.hasLogo !== undefined ? options.hasLogo : state.includeLogo;
+  const frameStyle = options.frameStyle || state.selectedFrame || "BASICO";
+  const campaignName = options.name || "INFOTEP QR";
+
+  // 1. Generate QR Code Matrix with Error Correction Level H (30%)
+  let typeNumber = 0; // Auto-detect smallest size fitting level H
+  let qr;
+  try {
+    qr = qrcode(typeNumber, "H");
+    qr.addData(text || "https://infotep.gob.do");
+    qr.make();
+  } catch (e) {
+    // Fallback to type 10 if string is long
+    qr = qrcode(10, "H");
+    qr.addData(text || "https://infotep.gob.do");
+    qr.make();
+  }
+
+  const moduleCount = qr.getModuleCount();
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // Determine canvas dimensions based on Frame Style
+  const isFramed = frameStyle === "ESCANAME";
+  const qrAreaSize = size;
+  const padding = Math.round(qrAreaSize * 0.08); // 8% quiet zone
+  const usableSize = qrAreaSize - padding * 2;
+  const cellSize = usableSize / moduleCount;
+
+  if (isFramed) {
+    const headerHeight = Math.round(size * 0.16);
+    const footerHeight = Math.round(size * 0.16);
+    canvas.width = size;
+    canvas.height = size + headerHeight + footerHeight;
+
+    // Card background
+    ctx.fillStyle = "#ffffff";
+    ctx.roundRect(0, 0, canvas.width, canvas.height, 40);
+    ctx.fill();
+
+    // Top Header Banner
+    ctx.fillStyle = color;
+    ctx.roundRect(0, 0, canvas.width, headerHeight, [40, 40, 0, 0]);
+    ctx.fill();
+
+    // Header Text
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `bold ${Math.round(headerHeight * 0.38)}px Sora, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("INFOTEP • MERCADEO", canvas.width / 2, headerHeight / 2);
+
+    // Translate to draw QR in middle
+    ctx.save();
+    ctx.translate(0, headerHeight);
+
+    // Draw QR Modules
+    drawQrMatrix(ctx, qr, moduleCount, padding, cellSize, color);
+
+    // Draw Logo in Center if enabled
+    if (hasLogo) {
+      drawCenterLogo(ctx, size / 2, size / 2, Math.round(size * 0.22));
+    }
+
+    ctx.restore();
+
+    // Bottom Footer Banner
+    const footerY = canvas.height - footerHeight;
+    ctx.fillStyle = "#ebc246";
+    ctx.roundRect(24, footerY + 12, canvas.width - 48, footerHeight - 24, 24);
+    ctx.fill();
+
+    ctx.fillStyle = "#131360";
+    ctx.font = `900 ${Math.round(footerHeight * 0.36)}px Sora, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("¡ESCÁNAME!", canvas.width / 2, footerY + footerHeight / 2);
+
+  } else {
+    // Basic Clean Frame
+    canvas.width = size;
+    canvas.height = size;
+
+    // White background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, size, size);
+
+    // Draw QR Modules
+    drawQrMatrix(ctx, qr, moduleCount, padding, cellSize, color);
+
+    // Draw Center Logo
+    if (hasLogo) {
+      drawCenterLogo(ctx, size / 2, size / 2, Math.round(size * 0.22));
+    }
+  }
+
+  return canvas;
+}
+
+/**
+ * Draws the QR Code modules onto context
+ */
+function drawQrMatrix(ctx, qr, count, padding, cellSize, color) {
+  ctx.fillStyle = color;
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) {
+        const x = padding + c * cellSize;
+        const y = padding + r * cellSize;
+        // Rounded module dots for a polished look
+        ctx.fillRect(Math.round(x), Math.round(y), Math.ceil(cellSize), Math.ceil(cellSize));
+      }
+    }
+  }
+}
+
+/**
+ * Draws the protected center shield and the INFOTEP institutional logo
+ */
+function drawCenterLogo(ctx, cx, cy, logoSize) {
+  // 1. Draw White Background Shield (Squircle / Rounded Box with subtle shadow)
+  const badgeSize = logoSize + 16;
+  const radius = Math.round(badgeSize * 0.25);
+
+  ctx.save();
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.25)";
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.roundRect(cx - badgeSize / 2, cy - badgeSize / 2, badgeSize, badgeSize, radius);
+  ctx.fill();
+
+  // Subtle inner border
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "#e2e0fc";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 2. Draw INFOTEP Logo
+  const logoImg = new Image();
+  logoImg.src = state.logoDataUrl;
+
+  if (logoImg.complete && logoImg.naturalWidth > 0) {
+    ctx.drawImage(logoImg, cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize);
+  } else {
+    // Vector fallback rendering of INFOTEP map & gear motif
+    ctx.fillStyle = "#131360";
+    ctx.beginPath();
+    ctx.arc(cx, cy, logoSize * 0.44, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#ebc246";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, logoSize * 0.32, 0.5, Math.PI * 1.8);
+    ctx.stroke();
+
+    ctx.fillStyle = "#009c51";
+    ctx.fillRect(cx - 10, cy - 10, 20, 20);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 14px Sora, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("INFOTEP", cx, cy + 18);
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Updates the live interactive preview box on the 'Generar QR' screen
+ */
+function updateLivePreview() {
+  const previewContainer = document.getElementById("qr-preview-target");
+  if (!previewContainer) return;
+
+  const urlInput = document.getElementById("qr-url");
+  const nameInput = document.getElementById("qr-name");
+
+  const rawUrl = (urlInput && urlInput.value.trim()) || "https://infotep.gob.do/promo";
+  const name = (nameInput && nameInput.value.trim()) || "Campaña INFOTEP";
+
+  const isDynamic = document.querySelector('input[name="qr-type"]:checked')?.value === "dynamic";
+  const targetEncode = isDynamic && state.webAppUrl ? `${state.webAppUrl}?r=preview` : rawUrl;
+
+  const canvas = generateQRCodeCanvas(targetEncode, {
+    size: 512,
+    color: state.selectedColor,
+    hasLogo: state.includeLogo,
+    frameStyle: state.selectedFrame,
+    name: name
+  });
+
+  previewContainer.innerHTML = "";
+  canvas.className = "w-full h-full object-contain rounded-xl shadow-lg";
+  previewContainer.appendChild(canvas);
+  state.previewCanvas = canvas;
+}
+
+// ============================================================================
+// EXPORT HANDLERS (PNG, SVG, PDF)
+// ============================================================================
+
+function exportCurrentQR() {
+  const nameInput = document.getElementById("qr-name");
+  const urlInput = document.getElementById("qr-url");
+
+  const name = (nameInput && nameInput.value.trim()) || "codigo_qr_infotep";
+  const cleanFilename = name.toLowerCase().replace(/[^a-z0-9]+/g, "_") + "_" + Date.now();
+
+  const url = (urlInput && urlInput.value.trim()) || "https://infotep.gob.do";
+  const isDynamic = document.querySelector('input[name="qr-type"]:checked')?.value === "dynamic";
+
+  // First save to Google Sheets
+  Busy.show("Guardando y generando recurso de alta resolución...");
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      Busy.hide();
+      if (res && res.success) {
+        showToast("Código QR guardado exitosamente");
+        // Add to local state
+        state.qrs.unshift(res.qr);
+        renderRepository();
+        renderDashboard();
+
+        // Perform download
+        const finalUrl = isDynamic ? (res.qr.shortUrl.startsWith("http") ? res.qr.shortUrl : (state.webAppUrl + res.qr.shortUrl)) : res.qr.targetUrl;
+        const fullCanvas = generateQRCodeCanvas(finalUrl, {
+          size: 1200,
+          color: state.selectedColor,
+          hasLogo: state.includeLogo,
+          frameStyle: state.selectedFrame,
+          name: name
+        });
+
+        triggerDownload(fullCanvas, cleanFilename, name, finalUrl);
+      }
+    })
+    .withFailureHandler((err) => {
+      Busy.hide();
+      showToast(err.message || "Error al guardar el código QR", "error");
+    })
+    .apiSaveQR({
+      name: name,
+      targetUrl: url,
+      type: isDynamic ? "DINAMICO" : "ESTATICO",
+      colorHex: state.selectedColor,
+      hasLogo: state.includeLogo,
+      frameStyle: state.selectedFrame
+    });
+}
+
+function triggerDownload(canvas, filename, title, destinationUrl) {
+  if (state.selectedFormat === "PNG") {
+    const link = document.createElement("a");
+    link.download = `${filename}.png`;
+    link.href = canvas.toDataURL("image/png", 1.0);
+    link.click();
+    showToast("Archivo PNG descargado en alta resolución (1200px)");
+  } else if (state.selectedFormat === "SVG") {
+    downloadAsSVG(destinationUrl, filename, title);
+  } else if (state.selectedFormat === "PDF") {
+    downloadAsPDF(canvas, filename, title, destinationUrl);
+  }
+}
+
+function downloadAsSVG(text, filename, title) {
+  const qr = qrcode(0, "H");
+  qr.addData(text);
+  qr.make();
+  const count = qr.getModuleCount();
+  const size = 1000;
+  const padding = 80;
+  const cellSize = (size - padding * 2) / count;
+
+  let rects = "";
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) {
+        rects += `<rect x="${padding + c * cellSize}" y="${padding + r * cellSize}" width="${cellSize}" height="${cellSize}" fill="${state.selectedColor}" />\n`;
+      }
+    }
+  }
+
+  let logoSvg = "";
+  if (state.includeLogo && state.logoDataUrl) {
+    const logoSize = size * 0.22;
+    const center = size / 2;
+    logoSvg = `
+      <rect x="${center - (logoSize + 16) / 2}" y="${center - (logoSize + 16) / 2}" width="${logoSize + 16}" height="${logoSize + 16}" rx="20" fill="#ffffff" stroke="#e2e0fc" stroke-width="2" />
+      <image href="${state.logoDataUrl}" x="${center - logoSize / 2}" y="${center - logoSize / 2}" width="${logoSize}" height="${logoSize}" />
+    `;
+  }
+
+  const svgContent = `<?xml version="1.0" standalone="no"?>
+<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title>${title}</title>
+  <rect width="${size}" height="${size}" fill="#ffffff" />
+  ${rects}
+  ${logoSvg}
+</svg>`;
+
+  const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+  const link = document.createElement("a");
+  link.download = `${filename}.svg`;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  showToast("Vector SVG descargado exitosamente");
+}
+
+function downloadAsPDF(canvas, filename, title, destinationUrl) {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    // Background header band
+    doc.setFillColor(19, 19, 96); // #131360
+    doc.rect(0, 0, 210, 35, "F");
+
+    // Header Text
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("INFOTEP - DEPARTAMENTO DE MERCADEO", 105, 18, { align: "center" });
+
+    doc.setFontSize(11);
+    doc.setTextColor(235, 194, 70); // #ebc246
+    doc.text("Recurso Gráfico Oficial - Código QR", 105, 26, { align: "center" });
+
+    // Campaign Title
+    doc.setTextColor(17, 17, 37);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(title, 105, 55, { align: "center" });
+
+    // QR Image Centered
+    const imgData = canvas.toDataURL("image/png");
+    const qrWidthMm = 120;
+    const qrHeightMm = (canvas.height / canvas.width) * qrWidthMm;
+    const qrX = (210 - qrWidthMm) / 2;
+    doc.addImage(imgData, "PNG", qrX, 65, qrWidthMm, qrHeightMm);
+
+    // Destination Info Card
+    const infoY = 65 + qrHeightMm + 15;
+    doc.setFillColor(245, 245, 250);
+    doc.roundedRect(25, infoY, 160, 28, 4, 4, "F");
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 120);
+    doc.text("ENLACE DE DESTINO:", 35, infoY + 10);
+
+    doc.setFontSize(10);
+    doc.setTextColor(19, 19, 96);
+    doc.text(destinationUrl.length > 65 ? destinationUrl.substring(0, 62) + "..." : destinationUrl, 35, infoY + 18);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 160);
+    doc.text(`Generado el ${new Date().toLocaleDateString("es-DO")} a través del Sistema Generador de QRs Institucionales.`, 105, 285, { align: "center" });
+
+    doc.save(`${filename}.pdf`);
+    showToast("Documento PDF listo para impresión descargado");
+  } catch (e) {
+    showToast("Error generando PDF: " + e.message, "error");
+  }
+}
+
+// ============================================================================
+// NAVIGATION & VIEW SWITCHING (SPA Router)
+// ============================================================================
+
+function navigateTo(viewName) {
+  state.currentView = viewName;
+
+  // Hide all view panels
+  const views = ["dashboard", "generar-qr", "mis-codigos", "gestion-usuarios", "configuracion"];
+  views.forEach((v) => {
+    const el = document.getElementById(`view-${v}`);
+    if (el) el.classList.add("hidden");
+  });
+
+  // Show target view
+  const target = document.getElementById(`view-${viewName}`);
+  if (target) target.classList.remove("hidden");
+
+  // Update Sidebar Active Links
+  document.querySelectorAll("[data-nav-view]").forEach((link) => {
+    const isTarget = link.getAttribute("data-nav-view") === viewName;
+    if (isTarget) {
+      link.className = "flex items-center gap-3 px-4 py-3 rounded-xl bg-primary-container text-on-primary-container font-bold transition-all shadow-sm";
+    } else {
+      link.className = "flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all";
+    }
+  });
+
+  // Trigger view specific re-render
+  if (viewName === "dashboard") renderDashboard();
+  if (viewName === "mis-codigos") renderRepository();
+  if (viewName === "gestion-usuarios") renderUsersTable();
+  if (viewName === "generar-qr") updateLivePreview();
+}
+
+// ============================================================================
+// VIEW RENDERERS
+// ============================================================================
+
+function renderDashboard() {
+  const d = state.dashboard || {};
+  const totalQrsEl = document.getElementById("dash-total-qrs");
+  const totalScansEl = document.getElementById("dash-total-scans");
+  const dynamicCountEl = document.getElementById("dash-dynamic-count");
+  const dynamicPctEl = document.getElementById("dash-dynamic-pct");
+
+  if (totalQrsEl) totalQrsEl.textContent = Number(d.totalQRs || state.qrs.length).toLocaleString();
+  if (totalScansEl) totalScansEl.textContent = Number(d.totalScans || 0).toLocaleString();
+  if (dynamicCountEl) dynamicCountEl.textContent = Number(d.dynamicCount || 0).toLocaleString();
+  if (dynamicPctEl) dynamicPctEl.textContent = `${d.dynamicPercent || 0}% del total`;
+
+  // Render Recent Activity List
+  const activityContainer = document.getElementById("dash-recent-list");
+  if (activityContainer) {
+    const recent = (state.qrs || []).slice(0, 4);
+    if (recent.length === 0) {
+      activityContainer.innerHTML = `<div class="p-6 text-center text-on-surface-variant text-sm">No hay códigos QR creados aún.</div>`;
+    } else {
+      activityContainer.innerHTML = recent
+        .map((qr) => {
+          const isDyn = qr.type === "DINAMICO";
+          return `
+          <div class="bg-surface-container p-3.5 rounded-xl flex items-center justify-between group hover:bg-surface-container-high transition-colors">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 bg-surface flex items-center justify-center rounded-lg border border-outline-variant/20">
+                <span class="material-symbols-outlined text-primary text-[22px]">${isDyn ? "qr_code_2" : "link"}</span>
+              </div>
+              <div class="flex flex-col">
+                <span class="font-headline-md text-sm text-on-surface font-semibold group-hover:text-primary transition-colors">${escapeHtml(qr.name)}</span>
+                <span class="font-body-sm text-xs text-on-surface-variant">${formatDate(qr.createdAt)} • ${qr.scanCount || 0} escaneos</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
+                isDyn ? "bg-tertiary/10 text-tertiary" : "bg-surface-container-highest text-on-surface-variant"
+              }">${qr.type}</span>
+              <button onclick="openPreviewModal('${qr.id}')" class="p-1.5 text-on-surface-variant hover:text-secondary rounded-lg hover:bg-surface transition-colors" title="Ver QR">
+                <span class="material-symbols-outlined text-[18px]">visibility</span>
+              </button>
+            </div>
+          </div>
+        `;
+        })
+        .join("");
+    }
+  }
+
+  // Render Top Performing QR
+  const topQrCard = document.getElementById("dash-top-qr-card");
+  if (topQrCard) {
+    const sorted = [...(state.qrs || [])].sort((a, b) => (b.scanCount || 0) - (a.scanCount || 0));
+    const top = sorted[0];
+    if (top) {
+      document.getElementById("dash-top-qr-name").textContent = top.name;
+      document.getElementById("dash-top-qr-scans").textContent = `${Number(top.scanCount || 0).toLocaleString()} Escaneos Totales`;
+      const thumb = document.getElementById("dash-top-qr-thumb");
+      if (thumb) {
+        const miniCanvas = generateQRCodeCanvas(top.targetUrl, { size: 160, color: top.colorHex, hasLogo: top.hasLogo });
+        thumb.innerHTML = "";
+        thumb.appendChild(miniCanvas);
+      }
+    }
+  }
+}
+
+function renderRepository() {
+  const container = document.getElementById("qrs-table-body");
+  if (!container) return;
+
+  const query = state.qrSearch.toLowerCase().trim();
+  const filter = state.qrFilter;
+
+  const filtered = state.qrs.filter((qr) => {
+    if (filter === "DINAMICOS" && qr.type !== "DINAMICO") return false;
+    if (filter === "ESTATICOS" && qr.type !== "ESTATICO") return false;
+    if (query && !qr.name.toLowerCase().includes(query) && !qr.targetUrl.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  document.getElementById("repo-total-count").textContent = `Mostrando ${filtered.length} de ${state.qrs.length} códigos`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="p-12 text-center text-on-surface-variant flex flex-col items-center gap-3">
+        <span class="material-symbols-outlined text-4xl opacity-40">folder_off</span>
+        <p class="text-sm">No se encontraron códigos QR con los filtros seleccionados.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered
+    .map((qr) => {
+      const isDyn = qr.type === "DINAMICO";
+      const displayUrl = qr.targetUrl.length > 38 ? qr.targetUrl.substring(0, 35) + "..." : qr.targetUrl;
+
+      return `
+      <div class="grid grid-cols-12 gap-4 p-4 items-center bg-surface-container hover:bg-surface-container-high transition-colors border-b border-outline-variant/10 group">
+        <!-- Thumbnail -->
+        <div class="col-span-1 flex justify-center">
+          <div class="w-11 h-11 bg-white rounded-lg p-1 shadow-sm flex items-center justify-center cursor-pointer hover:scale-110 transition-transform" onclick="openPreviewModal('${qr.id}')">
+            <span class="material-symbols-outlined text-[#131360] text-[24px]">qr_code_2</span>
+          </div>
+        </div>
+
+        <!-- Name & Details -->
+        <div class="col-span-3 flex flex-col">
+          <span class="font-bold text-on-surface text-sm group-hover:text-primary transition-colors cursor-pointer" onclick="openPreviewModal('${qr.id}')">${escapeHtml(qr.name)}</span>
+          <span class="text-xs text-on-surface-variant font-normal truncate">Creado por: ${escapeHtml(qr.createdBy || "Sistema")}</span>
+        </div>
+
+        <!-- Type -->
+        <div class="col-span-2 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full ${isDyn ? "bg-secondary shadow-[0_0_8px_rgba(235,194,70,0.8)]" : "bg-outline"}"></span>
+          <span class="font-label-bold text-xs ${isDyn ? "text-secondary font-bold" : "text-on-surface-variant"}">${qr.type}</span>
+        </div>
+
+        <!-- Destination URL (Editable for Dynamic) -->
+        <div class="col-span-3 flex flex-col justify-center">
+          <div class="flex items-center gap-2 max-w-full">
+            <a href="${qr.targetUrl}" target="_blank" class="text-xs text-primary truncate max-w-[85%] hover:underline" title="${qr.targetUrl}">
+              ${escapeHtml(displayUrl)}
+            </a>
+            ${
+              isDyn && qr.canEdit
+                ? `<button onclick="openEditUrlModal('${qr.id}', '${escapeHtml(qr.targetUrl)}')" class="text-on-surface-variant hover:text-secondary opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-surface" title="Modificar Destino">
+                     <span class="material-symbols-outlined text-[16px]">edit_square</span>
+                   </button>`
+                : ""
+            }
+          </div>
+          <span class="text-[10px] text-tertiary font-semibold mt-0.5">${qr.scanCount || 0} escaneos registrados</span>
+        </div>
+
+        <!-- Date -->
+        <div class="col-span-1 text-xs text-on-surface-variant">
+          ${formatShortDate(qr.createdAt)}
+        </div>
+
+        <!-- Actions -->
+        <div class="col-span-2 flex justify-end gap-2">
+          <button onclick="downloadQrById('${qr.id}')" class="w-9 h-9 rounded-full bg-surface-container-highest hover:bg-secondary hover:text-on-secondary text-on-surface flex items-center justify-center transition-all shadow-sm" title="Descargar PNG">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+          </button>
+          ${
+            qr.canEdit
+              ? `<button onclick="confirmDeleteQR('${qr.id}', '${escapeHtml(qr.name)}')" class="w-9 h-9 rounded-full bg-surface-container-highest hover:bg-error-container hover:text-on-error-container text-on-surface flex items-center justify-center transition-all" title="Eliminar">
+                   <span class="material-symbols-outlined text-[18px]">delete</span>
+                 </button>`
+              : ""
+          }
+        </div>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+function renderUsersTable() {
+  const container = document.getElementById("users-table-body");
+  if (!container) return;
+
+  const query = state.userSearch.toLowerCase().trim();
+  const filtered = state.users.filter((u) => {
+    if (query && !u.name.toLowerCase().includes(query) && !u.email.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  document.getElementById("users-total-count").textContent = `Mostrando ${filtered.length} colaboradores`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <tr>
+        <td colspan="5" class="p-8 text-center text-on-surface-variant text-sm">No se encontraron usuarios registrados.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered
+    .map((u) => {
+      const isAdmin = u.role === "ADMIN";
+      const isActive = u.status === "ACTIVO";
+      const initials = u.name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+
+      return `
+      <tr class="hover:bg-surface-container-high transition-colors border-b border-outline-variant/10 group">
+        <td class="px-6 py-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-primary/20 text-primary font-bold text-xs flex items-center justify-center border border-primary/30">
+              ${initials || "U"}
+            </div>
+            <div class="flex flex-col">
+              <span class="font-bold text-sm text-on-surface">${escapeHtml(u.name)}</span>
+              <span class="text-xs text-on-surface-variant">${escapeHtml(u.email)}</span>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+            isAdmin ? "bg-secondary/15 text-secondary border border-secondary/30" : "bg-surface-container-highest text-on-surface-variant"
+          }">
+            <span class="material-symbols-outlined text-[14px]">${isAdmin ? "shield_person" : "person"}</span>
+            ${u.role}
+          </span>
+        </td>
+        <td class="px-6 py-4">
+          <button onclick="toggleUserStatus('${u.email}', '${isActive ? "INACTIVO" : "ACTIVO"}')" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+            isActive ? "bg-tertiary/15 text-tertiary hover:bg-error/20 hover:text-error" : "bg-outline-variant/20 text-outline hover:bg-tertiary/20 hover:text-tertiary"
+          }" title="Clic para cambiar estado">
+            <span class="w-2 h-2 rounded-full ${isActive ? "bg-tertiary" : "bg-outline"}"></span>
+            ${u.status}
+          </button>
+        </td>
+        <td class="px-6 py-4 text-xs text-on-surface-variant">
+          ${formatShortDate(u.lastAccess || u.createdAt)}
+        </td>
+        <td class="px-6 py-4 text-right">
+          <div class="flex items-center justify-end gap-2">
+            <button onclick="openEditUserModal('${u.email}', '${escapeHtml(u.name)}', '${u.role}', '${escapeHtml(u.department || "")}')" class="p-1.5 text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface transition-colors" title="Editar">
+              <span class="material-symbols-outlined text-[18px]">edit</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    })
+    .join("");
+}
+
+// ============================================================================
+// MODAL DIALOG ACTIONS (Edit URL, Preview, Users)
+// ============================================================================
+
+function openEditUrlModal(qrId, currentUrl) {
+  const modal = document.getElementById("edit-destination-modal");
+  const idInput = document.getElementById("edit-modal-qr-id");
+  const urlInput = document.getElementById("edit-modal-new-url");
+
+  if (!modal || !idInput || !urlInput) return;
+
+  idInput.value = qrId;
+  urlInput.value = currentUrl;
+  modal.classList.remove("hidden");
+}
+
+function closeEditUrlModal() {
+  const modal = document.getElementById("edit-destination-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function saveUpdatedUrl() {
+  const id = document.getElementById("edit-modal-qr-id").value;
+  const newUrl = document.getElementById("edit-modal-new-url").value.trim();
+
+  if (!newUrl) {
+    showToast("Por favor introduce una URL válida", "error");
+    return;
+  }
+
+  Busy.show("Actualizando destino dinámico...");
+  closeEditUrlModal();
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      Busy.hide();
+      if (res && res.success) {
+        showToast("Destino dinámico actualizado correctamente");
+        const found = state.qrs.find((q) => q.id === id);
+        if (found) {
+          found.targetUrl = newUrl;
+          found.updatedAt = res.updatedAt;
+        }
+        renderRepository();
+      }
+    })
+    .withFailureHandler((err) => {
+      Busy.hide();
+      showToast(err.message || "Error al actualizar URL", "error");
+    })
+    .apiUpdateQRUrl(id, newUrl);
+}
+
+function confirmDeleteQR(qrId, qrName) {
+  showModal({
+    title: "Eliminar Código QR",
+    message: `¿Estás seguro de que deseas eliminar permanentemente el código "${qrName}"? Esta acción no se puede deshacer.`,
+    confirmText: "Eliminar",
+    danger: true,
+    onConfirm: () => {
+      Busy.show("Eliminando código QR...");
+      google.script.run
+        .withSuccessHandler((res) => {
+          Busy.hide();
+          showToast("Código QR eliminado");
+          state.qrs = state.qrs.filter((q) => q.id !== qrId);
+          renderRepository();
+          renderDashboard();
+        })
+        .withFailureHandler((err) => {
+          Busy.hide();
+          showToast(err.message || "Error al eliminar", "error");
+        })
+        .apiDeleteQR(qrId);
+    }
+  });
+}
+
+function openPreviewModal(qrId) {
+  const qr = state.qrs.find((q) => q.id === qrId);
+  if (!qr) return;
+
+  const modal = document.getElementById("qr-preview-modal");
+  const target = document.getElementById("qr-preview-modal-canvas");
+  const title = document.getElementById("qr-preview-modal-title");
+  const link = document.getElementById("qr-preview-modal-link");
+
+  title.textContent = qr.name;
+  link.textContent = qr.targetUrl;
+  link.href = qr.targetUrl;
+
+  const isDyn = qr.type === "DINAMICO";
+  const encodeUrl = isDyn && state.webAppUrl ? `${state.webAppUrl}?r=${qr.id}` : qr.targetUrl;
+
+  const canvas = generateQRCodeCanvas(encodeUrl, {
+    size: 600,
+    color: qr.colorHex,
+    hasLogo: qr.hasLogo,
+    frameStyle: qr.frameStyle,
+    name: qr.name
+  });
+
+  target.innerHTML = "";
+  target.appendChild(canvas);
+
+  document.getElementById("btn-modal-download-png").onclick = () => {
+    triggerDownload(canvas, qr.name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), qr.name, encodeUrl);
+  };
+
+  modal.classList.remove("hidden");
+}
+
+function closePreviewModal() {
+  const modal = document.getElementById("qr-preview-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function downloadQrById(qrId) {
+  const qr = state.qrs.find((q) => q.id === qrId);
+  if (!qr) return;
+  const isDyn = qr.type === "DINAMICO";
+  const encodeUrl = isDyn && state.webAppUrl ? `${state.webAppUrl}?r=${qr.id}` : qr.targetUrl;
+  const canvas = generateQRCodeCanvas(encodeUrl, {
+    size: 1200,
+    color: qr.colorHex,
+    hasLogo: qr.hasLogo,
+    frameStyle: qr.frameStyle,
+    name: qr.name
+  });
+  triggerDownload(canvas, qr.name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), qr.name, encodeUrl);
+}
+
+// ============================================================================
+// USER MANAGEMENT ACTIONS
+// ============================================================================
+
+function openAddUserModal() {
+  document.getElementById("user-modal-form").reset();
+  document.getElementById("user-modal-is-edit").value = "false";
+  document.getElementById("user-modal-title").textContent = "Agregar Nuevo Usuario";
+  document.getElementById("add-user-modal").classList.remove("hidden");
+}
+
+function openEditUserModal(email, name, role, department) {
+  document.getElementById("user-modal-email").value = email;
+  document.getElementById("user-modal-name").value = name;
+  document.getElementById("user-modal-role").value = role.toLowerCase();
+  document.getElementById("user-modal-dept").value = department;
+  document.getElementById("user-modal-is-edit").value = "true";
+  document.getElementById("user-modal-title").textContent = "Editar Usuario";
+  document.getElementById("add-user-modal").classList.remove("hidden");
+}
+
+function closeAddUserModal() {
+  document.getElementById("add-user-modal").classList.add("hidden");
+}
+
+function saveUserForm(e) {
+  e.preventDefault();
+  const email = document.getElementById("user-modal-email").value.trim();
+  const name = document.getElementById("user-modal-name").value.trim();
+  const role = document.getElementById("user-modal-role").value.toUpperCase();
+  const dept = document.getElementById("user-modal-dept").value.trim() || "Mercadeo";
+
+  if (!email || !name) {
+    showToast("Completa los campos obligatorios", "error");
+    return;
+  }
+
+  Busy.show("Guardando usuario...");
+  closeAddUserModal();
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      Busy.hide();
+      if (res && res.success) {
+        showToast("Usuario registrado exitosamente");
+        // Reload users list
+        google.script.run.withSuccessHandler((users) => {
+          state.users = users;
+          renderUsersTable();
+        }).apiGetUsers();
+      }
+    })
+    .withFailureHandler((err) => {
+      Busy.hide();
+      showToast(err.message || "Error al guardar usuario", "error");
+    })
+    .apiSaveUser({
+      email: email,
+      name: name,
+      role: role,
+      department: dept,
+      status: "ACTIVO"
+    });
+}
+
+function toggleUserStatus(email, newStatus) {
+  Busy.show("Actualizando estado...");
+  google.script.run
+    .withSuccessHandler((res) => {
+      Busy.hide();
+      showToast(`Estado actualizado a ${newStatus}`);
+      const user = state.users.find((u) => u.email === email);
+      if (user) user.status = newStatus;
+      renderUsersTable();
+    })
+    .withFailureHandler((err) => {
+      Busy.hide();
+      showToast(err.message || "Error al actualizar estado", "error");
+    })
+    .apiToggleUserStatus(email, newStatus);
+}
+
+// ============================================================================
+// SYSTEM BOOTSTRAP & INITIALIZATION
+// ============================================================================
+
+function initApp(bootstrapData) {
+  Busy.init();
+
+  if (bootstrapData) {
+    state.version = bootstrapData.version || "1.0.0";
+    state.user = bootstrapData.user || {};
+    state.config = bootstrapData.config || {};
+    state.dashboard = bootstrapData.dashboard || {};
+    state.qrs = bootstrapData.qrs || [];
+    state.users = bootstrapData.users || [];
+    state.webAppUrl = bootstrapData.webAppUrl || "";
+    state.logoDataUrl = bootstrapData.logoDataUrl || "";
+
+    // Set User Profile in Header
+    document.getElementById("user-display-name").textContent = state.user.name || "Colaborador";
+    document.getElementById("user-display-role").textContent = state.user.role === "ADMIN" ? "Administrador Mercadeo" : "Usuario Mercadeo";
+    const initials = (state.user.name || "U")
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+    document.getElementById("user-avatar-initials").textContent = initials;
+
+    // Show/hide admin tabs
+    if (state.user.role !== "ADMIN") {
+      document.querySelectorAll(".admin-only").forEach((el) => el.classList.add("hidden"));
+    }
+
+    // Set logo in sidebar
+    if (state.logoDataUrl) {
+      document.getElementById("sidebar-logo-img").src = state.logoDataUrl;
+    }
+
+    // Set Initial Views
+    renderDashboard();
+    renderRepository();
+    if (state.user.role === "ADMIN") renderUsersTable();
+    updateLivePreview();
+  }
+
+  setupEventListeners();
+}
+
+function setupEventListeners() {
+  // Navigation
+  document.querySelectorAll("[data-nav-view]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const view = btn.getAttribute("data-nav-view");
+      navigateTo(view);
+    });
+  });
+
+  // Color Swatches Selection
+  document.querySelectorAll(".color-swatch-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".color-swatch-btn").forEach((b) => b.classList.remove("ring-2", "ring-primary", "ring-offset-2", "ring-offset-surface-container-high"));
+      btn.classList.add("ring-2", "ring-primary", "ring-offset-2", "ring-offset-surface-container-high");
+      state.selectedColor = btn.getAttribute("data-color");
+      updateLivePreview();
+    });
+  });
+
+  // Custom Color Input
+  const customColorInput = document.getElementById("custom-color-input");
+  if (customColorInput) {
+    customColorInput.addEventListener("input", (e) => {
+      state.selectedColor = e.target.value;
+      updateLivePreview();
+    });
+  }
+
+  // Format Pills
+  document.querySelectorAll(".format-pill-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".format-pill-btn").forEach((b) => {
+        b.classList.remove("bg-surface-container", "text-primary", "shadow-sm");
+        b.classList.add("text-on-surface-variant");
+      });
+      btn.classList.add("bg-surface-container", "text-primary", "shadow-sm");
+      btn.classList.remove("text-on-surface-variant");
+      state.selectedFormat = btn.getAttribute("data-format");
+    });
+  });
+
+  // Frame Style Selection
+  document.querySelectorAll(".frame-style-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".frame-style-btn").forEach((b) => {
+        b.classList.remove("border-2", "border-primary", "bg-primary/5", "text-primary");
+        b.classList.add("border", "border-outline-variant/30", "bg-surface-container-low", "text-on-surface-variant");
+      });
+      btn.classList.add("border-2", "border-primary", "bg-primary/5", "text-primary");
+      btn.classList.remove("border-outline-variant/30", "bg-surface-container-low", "text-on-surface-variant");
+      state.selectedFrame = btn.getAttribute("data-frame");
+      updateLivePreview();
+    });
+  });
+
+  // Include Logo Toggle
+  const logoToggle = document.getElementById("toggle-include-logo");
+  if (logoToggle) {
+    logoToggle.addEventListener("change", (e) => {
+      state.includeLogo = e.target.checked;
+      updateLivePreview();
+    });
+  }
+
+  // Live Input Changes
+  const nameInput = document.getElementById("qr-name");
+  const urlInput = document.getElementById("qr-url");
+  if (nameInput) nameInput.addEventListener("input", debounce(updateLivePreview, 250));
+  if (urlInput) urlInput.addEventListener("input", debounce(updateLivePreview, 250));
+
+  // QR Type Radios
+  document.querySelectorAll('input[name="qr-type"]').forEach((radio) => {
+    radio.addEventListener("change", updateLivePreview);
+  });
+
+  // Repository Filters
+  document.querySelectorAll(".repo-filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".repo-filter-btn").forEach((b) => {
+        b.classList.remove("bg-secondary", "text-on-secondary", "shadow-md");
+        b.classList.add("text-on-surface-variant");
+      });
+      btn.classList.add("bg-secondary", "text-on-secondary", "shadow-md");
+      btn.classList.remove("text-on-surface-variant");
+      state.qrFilter = btn.getAttribute("data-filter");
+      renderRepository();
+    });
+  });
+
+  // Repository Search
+  const repoSearch = document.getElementById("repo-search-input");
+  if (repoSearch) {
+    repoSearch.addEventListener("input", (e) => {
+      state.qrSearch = e.target.value;
+      renderRepository();
+    });
+  }
+
+  // Top Search Input
+  const topSearch = document.getElementById("top-search-input");
+  if (topSearch) {
+    topSearch.addEventListener("input", (e) => {
+      state.qrSearch = e.target.value;
+      navigateTo("mis-codigos");
+      if (repoSearch) repoSearch.value = e.target.value;
+      renderRepository();
+    });
+  }
+
+  // Users Search
+  const userSearch = document.getElementById("users-search-input");
+  if (userSearch) {
+    userSearch.addEventListener("input", (e) => {
+      state.userSearch = e.target.value;
+      renderUsersTable();
+    });
+  }
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+function debounce(fn, wait) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), wait);
+  };
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/[&<>"']/g, function (m) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+  });
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return "Reciente";
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleDateString("es-DO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch (e) {
+    return isoStr;
+  }
+}
+
+function formatShortDate(isoStr) {
+  if (!isoStr) return "-";
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleDateString("es-DO", { day: "2-digit", month: "short", year: "2-digit" });
+  } catch (e) {
+    return isoStr;
+  }
+}
+</script>
