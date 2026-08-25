@@ -6,7 +6,7 @@
  * Backend Controller & REST-like API for Google Apps Script
  */
 
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const DEFAULT_PRIMARY_COLOR = "#131360";
 const DEFAULT_SECONDARY_COLOR = "#ebc246";
 
@@ -61,7 +61,8 @@ function setupInitialSheets(ss) {
       ["SECONDARY_COLOR", "#ebc246", "Color secundario de mercadeo (Amarillo)"],
       ["LOGO_FILE_ID", "", "ID de Google Drive para el logotipo institucional"],
       ["ADMIN_EMAILS", Session.getActiveUser().getEmail() || "admin@infotep.edu.do", "Correos de administradores iniciales"],
-      ["WEBAPP_URL", ScriptApp.getService().getUrl() || "", "URL del despliegue de la Web App"]
+      ["WEBAPP_URL", ScriptApp.getService().getUrl() || "", "URL del despliegue de la Web App"],
+      ["REDIRECTOR_URL", "", "URL opcional de un Micro-Redirector público externo"]
     ];
     configSheet.getRange(1, 1, configData.length, configData[0].length).setValues(configData);
     configSheet.getRange("A1:C1").setFontWeight("bold").setBackground("#131360").setFontColor("#ffffff");
@@ -157,7 +158,6 @@ function getLogoDataUrl_() {
       Logger.log("Error reading logo from Drive ID: " + e.message);
     }
   }
-  // Return authentic official INFOTEP color logo
   if (typeof APP_INFOTEP_LOGO_COLOR !== "undefined" && APP_INFOTEP_LOGO_COLOR) {
     return APP_INFOTEP_LOGO_COLOR;
   }
@@ -183,7 +183,6 @@ function getCurrentUser_() {
   const ss = getSpreadsheet_();
   const usersSheet = ss.getSheetByName("Usuarios");
   
-  // If no email detected or testing without login
   if (!email) {
     if (adminEmails.length > 0) {
       email = adminEmails[0];
@@ -210,7 +209,6 @@ function getCurrentUser_() {
     }
   }
 
-  // If user not in table but is in ADMIN_EMAILS list -> auto-register
   if (!userRecord && (adminEmails.includes(email) || adminEmails.length === 0)) {
     userRecord = {
       email: email,
@@ -247,7 +245,6 @@ function doGet(e) {
     return handleQrRedirect_(qrId.trim(), e);
   }
 
-  // Otherwise, user is accessing the Web App
   const currentUser = getCurrentUser_();
 
   if (currentUser.status !== "ACTIVO") {
@@ -402,10 +399,14 @@ function apiBootstrap() {
     throw new Error("Usuario inactivo o no autorizado.");
   }
 
+  const ss = getSpreadsheet_();
   const dashboard = apiGetDashboard();
   const qrs = apiGetQRs();
   const config = getConfigMap_();
   const users = currentUser.role === "ADMIN" ? apiGetUsers() : [];
+
+  // Effective redirector URL: config.REDIRECTOR_URL (if provided) > config.WEBAPP_URL > script service url
+  const effectiveRedirectUrl = config["REDIRECTOR_URL"] || config["WEBAPP_URL"] || ScriptApp.getService().getUrl() || "";
 
   return {
     version: APP_VERSION,
@@ -414,7 +415,8 @@ function apiBootstrap() {
     dashboard: dashboard,
     qrs: qrs,
     users: users,
-    webAppUrl: config["WEBAPP_URL"] || ScriptApp.getService().getUrl() || "",
+    spreadsheetId: ss.getId(),
+    webAppUrl: effectiveRedirectUrl,
     logoDataUrl: getLogoDataUrl_()
   };
 }
@@ -580,8 +582,8 @@ function apiSaveQR(payload) {
     const now = new Date().toISOString();
     
     const config = getConfigMap_();
-    const webAppUrl = config["WEBAPP_URL"] || ScriptApp.getService().getUrl() || "";
-    const shortUrl = type === "DINAMICO" ? (webAppUrl ? `${webAppUrl}?r=${id}` : `?r=${id}`) : payload.targetUrl.trim();
+    const effectiveBaseUrl = config["REDIRECTOR_URL"] || config["WEBAPP_URL"] || ScriptApp.getService().getUrl() || "";
+    const shortUrl = type === "DINAMICO" ? (effectiveBaseUrl ? `${effectiveBaseUrl}?r=${id}` : `?r=${id}`) : payload.targetUrl.trim();
 
     const rowData = [
       id,

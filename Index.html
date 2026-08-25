@@ -9,16 +9,25 @@
 <body class="bg-background font-body-md text-on-background min-h-screen">
 
   <!-- ========================================================================= -->
-  <!-- FULL-SCREEN INITIAL LOADING OVERLAY                                       -->
+  <!-- FULL-SCREEN INITIAL LOADING OVERLAY (0ms LATENCY INLINE VECTOR ICON)      -->
   <!-- ========================================================================= -->
-  <div id="initial-loading-screen" class="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-5 transition-opacity duration-300">
-    <div class="w-20 h-20 rounded-2xl bg-surface-container flex items-center justify-center p-2.5 border border-outline-variant/30 shadow-2xl overflow-hidden">
-      <img src="<?= logoDataUrl ?>" alt="INFOTEP" class="w-full h-full object-contain">
+  <div id="initial-loading-screen" class="fixed inset-0 z-[100] bg-[#111125] flex flex-col items-center justify-center gap-6 transition-opacity duration-300">
+    <div class="relative flex items-center justify-center">
+      <!-- Outer glowing spinner -->
+      <div class="w-20 h-20 border-4 border-[#1e1e38] border-t-[#ebc246] border-r-[#009c51] rounded-full animate-spin"></div>
+      <!-- Center instant vector emblem -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <svg class="w-10 h-10 text-[#c0c1ff]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="44" stroke="#ebc246" stroke-width="4" stroke-dasharray="180 80"/>
+          <circle cx="50" cy="50" r="28" fill="#131360" stroke="#009c51" stroke-width="3"/>
+          <path d="M50 34V66M34 50H66" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
     </div>
-    <div class="flex flex-col items-center gap-2 text-center">
-      <div class="w-10 h-10 border-4 border-surface-container-high border-t-secondary rounded-full animate-spin"></div>
-      <span class="font-headline-md text-base sm:text-lg font-bold text-on-surface">Cargando Generador de QRs...</span>
-      <span class="text-xs text-on-surface-variant">Sincronizando campañas y perfil de usuario</span>
+    
+    <div class="flex flex-col items-center gap-1.5 text-center px-4">
+      <span class="font-headline-md text-base sm:text-lg font-bold text-[#e2e0fc] tracking-tight">INFOTEP QR Generator</span>
+      <span class="text-xs text-[#c7c5d2]/80">Cargando plataforma y recursos de mercadeo...</span>
     </div>
   </div>
 
@@ -212,7 +221,7 @@
                 <span class="material-symbols-outlined text-secondary text-[20px]">star</span>
               </div>
               
-              <!-- Clean centered thumbnail with NO text overlap -->
+              <!-- Clean centered thumbnail -->
               <div class="flex flex-col items-center text-center my-2 gap-3">
                 <div id="dash-top-qr-thumb" class="w-32 h-32 bg-white rounded-2xl p-2.5 shadow-xl flex items-center justify-center border border-outline-variant/20 hover:scale-105 transition-transform">
                   <span class="material-symbols-outlined text-primary text-4xl">qr_code_2</span>
@@ -244,7 +253,7 @@
               <h2 class="font-headline-xl text-2xl font-bold text-primary">Configurar Nuevo Código QR</h2>
               <p class="font-body-md text-xs text-on-surface-variant flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-secondary text-[16px]">bolt</span>
-                Optimizado con Corrección de Errores Nivel H y Logo Institucional
+                Optimizado con Corrección de Errores Nivel H y Logo Proporcional
               </p>
             </div>
 
@@ -430,7 +439,7 @@
           </div>
         </div>
 
-        <!-- Table Container (Horizontal scroll on mobile) -->
+        <!-- Table Container -->
         <div class="flex flex-col w-full bg-surface-container-low rounded-2xl shadow-xl overflow-hidden border border-outline-variant/15">
           <div class="overflow-x-auto min-w-full">
             <!-- Table Header -->
@@ -509,10 +518,11 @@
       <section id="view-configuracion" class="hidden flex flex-col gap-6">
         <div class="flex flex-col gap-1">
           <h2 class="font-headline-xl text-2xl font-bold text-on-background">Configuración del Sistema</h2>
-          <p class="font-body-md text-xs text-on-surface-variant">Ajustes generales del generador y base de datos.</p>
+          <p class="font-body-md text-xs text-on-surface-variant">Ajustes del generador, base de datos y arquitectura de redirección.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- App Info -->
           <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col gap-4 shadow-md">
             <h3 class="font-bold text-sm text-primary uppercase tracking-wider">Información de la Aplicación</h3>
             <div class="flex flex-col gap-2.5 text-xs text-on-surface-variant">
@@ -525,22 +535,30 @@
                 <span class="text-tertiary font-bold">Google Workspace (V8)</span>
               </div>
               <div class="flex justify-between py-1 border-b border-outline-variant/10">
-                <span>URL WebApp Redirección:</span>
-                <span class="text-primary truncate max-w-[200px]" title="<?= webAppUrl ?>"><?= webAppUrl || 'Configurada en Apps Script' ?></span>
+                <span>Spreadsheet ID:</span>
+                <span id="cfg-sheet-id" class="text-primary font-mono text-[11px] truncate max-w-[180px]">Cargando...</span>
               </div>
             </div>
           </div>
 
+          <!-- Micro-Redirector Architecture Info -->
           <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col justify-between gap-4 shadow-md">
             <div class="flex flex-col gap-2">
-              <h3 class="font-bold text-sm text-secondary uppercase tracking-wider">Mantenimiento de Datos</h3>
-              <p class="text-xs text-on-surface-variant">
-                Verifica que las hojas `Config`, `Usuarios`, `QRs` y `Scans` estén creadas y estructuradas con los encabezados estándar.
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary text-[20px]">hub</span>
+                <h3 class="font-bold text-sm text-secondary uppercase tracking-wider">Micro-Redirector Público</h3>
+              </div>
+              <p class="text-xs text-on-surface-variant leading-relaxed">
+                Permite mantener esta aplicación principal <strong>restringida a la organización</strong> mientras los enlaces dinámicos se procesan mediante un script secundario público (<code class="bg-surface-container-low px-1 py-0.5 rounded text-primary">Redirector.js</code>).
               </p>
+              <div class="mt-2 flex flex-col gap-1">
+                <label for="cfg-redirector-url" class="text-[10px] uppercase font-bold text-on-surface-variant">URL del Micro-Redirector (Opcional):</label>
+                <input id="cfg-redirector-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="bg-surface-container-low text-on-surface text-xs px-3 py-2 rounded-xl border border-outline-variant/20 outline-none focus:border-secondary">
+              </div>
             </div>
-            <button onclick="Busy.show('Inicializando hojas...'); google.script.run.withSuccessHandler((r)=>{ Busy.hide(); showToast('Estructura de hojas verificada'); }).setupInitialSheets();" class="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold text-xs rounded-xl transition-all self-start flex items-center gap-2">
-              <span class="material-symbols-outlined text-[18px]">database</span>
-              Verificar / Inicializar Estructura de Hojas
+            <button onclick="saveRedirectorConfig()" class="px-4 py-2.5 bg-secondary text-on-secondary font-bold text-xs rounded-xl shadow transition-all self-end flex items-center gap-2 hover:bg-secondary-fixed">
+              <span class="material-symbols-outlined text-[16px]">save</span>
+              Guardar Configuración
             </button>
           </div>
         </div>
@@ -566,7 +584,7 @@
         </button>
       </div>
 
-      <!-- Pure White QR Box (Clean canvas without buttons or overlay text) -->
+      <!-- Pure White QR Box -->
       <div class="w-full bg-white rounded-2xl p-4 shadow-xl flex items-center justify-center mx-auto border border-outline-variant/15">
         <div id="qr-preview-modal-canvas" class="w-56 h-56 flex items-center justify-center">
           <!-- Canvas injected dynamically -->
@@ -585,7 +603,7 @@
         </a>
       </div>
 
-      <!-- Action Buttons Row (BELOW the QR, isolated and clean) -->
+      <!-- Action Buttons Row (BELOW the QR) -->
       <div class="grid grid-cols-3 gap-2 w-full pt-1">
         <button id="btn-modal-download-png" class="bg-secondary text-on-secondary font-bold text-xs py-2.5 px-2 rounded-xl shadow hover:bg-secondary-fixed transition-all flex items-center justify-center gap-1" title="Descargar PNG 1200px">
           <span class="material-symbols-outlined text-[16px]">image</span>
