@@ -4,15 +4,16 @@
  * Dirección de Comunicaciones - Departamento de Mercadeo
  * ============================================================================
  * Propósito:
- * Servicio complementario ultraligero que se despliega como Web App pública
- * (Acceso: "Anyone / Cualquier persona") exclusivamente para procesar las
- * redirecciones de códigos QR dinámicos y contabilizar escaneos.
+ * Servicio complementario ultraligero que se despliega en un PROYECTO SEPARADO
+ * de Apps Script como Web App pública (Acceso: "Anyone / Cualquier persona")
+ * exclusivamente para procesar las redirecciones de códigos QR dinámicos
+ * y contabilizar escaneos.
  *
- * Esto permite mantener la aplicación principal de gestión 100% RESTRINGIDA
- * a usuarios autorizados de Google Workspace en el dominio de INFOTEP.
+ * NOTA: NO agregar este archivo en el proyecto de la App Principal.
+ * Debe crearse como un proyecto nuevo en script.google.com llamado "Redireccionador".
  */
 
-// NOTA: Configura aquí el ID de la hoja de cálculo de Google Sheets compartida
+// Configura aquí el ID de la hoja de cálculo de Google Sheets compartida
 const SPREADSHEET_ID = ""; // Ejemplo: "1AbCdEfGhIjKlMnOpQrStUvWxYz..."
 
 function doGet(e) {
