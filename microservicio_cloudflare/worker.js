@@ -13,11 +13,10 @@
  */
 
 // CONFIGURACIÓN:
-// Opción 1: Coloca el ID de tu Google Sheet (Ej: "1AbCdEfGhIjKlMnOpQrStUvWxYz...")
-const SPREADSHEET_ID = "TU_SPREADSHEET_ID_AQUI";
-
-// Opción 2 (Opcional): Si publicaste la hoja en la web, pega aquí la URL completa del CSV
-const PUBLISHED_CSV_URL = "";
+// Pega aquí la URL completa que te dio Google al "Publicar en la web" como CSV
+// O simplemente pon el SPREADSHEET_ID
+let PUBLISHED_CSV_URL = "";
+let SPREADSHEET_ID = "";
 
 export default {
   async fetch(request, env, ctx) {
@@ -45,14 +44,13 @@ export default {
     }
 
     try {
-      // Determinar las URLs de descarga del CSV de Google Sheets
       let urlsToTry = [];
       
       if (PUBLISHED_CSV_URL && PUBLISHED_CSV_URL.startsWith("http")) {
         urlsToTry.push(PUBLISHED_CSV_URL);
       }
       
-      if (SPREADSHEET_ID && SPREADSHEET_ID !== "TU_SPREADSHEET_ID_AQUI") {
+      if (SPREADSHEET_ID && SPREADSHEET_ID.length > 10) {
         urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=QRs`);
         urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&sheet=QRs`);
         urlsToTry.push(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv`);
@@ -61,9 +59,9 @@ export default {
       let csvText = "";
       let lastStatus = 0;
 
-      for (const targetUrl of urlsToTry) {
+      for (const targetFetchUrl of urlsToTry) {
         try {
-          const res = await fetch(targetUrl, {
+          const res = await fetch(targetFetchUrl, {
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
               "Accept": "text/csv,text/plain,*/*"
@@ -77,7 +75,6 @@ export default {
           lastStatus = res.status;
           if (res.ok) {
             const txt = await res.text();
-            // Validar que realmente sea un CSV y no una página HTML de error de Google
             if (txt && !txt.includes("<!DOCTYPE html") && !txt.includes("<html")) {
               csvText = txt;
               break;
@@ -89,7 +86,7 @@ export default {
       if (!csvText) {
         return new Response(getNotFoundHtml(
           `No se pudo leer la hoja de cálculo (Estado HTTP: ${lastStatus}).<br><br>` +
-          `<strong>Solución:</strong> En Google Sheets, ve a <em>Archivo &gt; Compartir &gt; Publicar en la web</em>, selecciona la pestaña <strong>QRs</strong>, formato <strong>Valores separados por comas (.csv)</strong> y haz clic en <strong>Publicar</strong>.`
+          `Asegúrate de haber publicado la pestaña <strong>QRs</strong> como CSV en Google Sheets.`
         ), {
           status: 502,
           headers: { "Content-Type": "text/html;charset=UTF-8" }
@@ -102,7 +99,7 @@ export default {
       let targetUrl = "";
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (row.length > 0) {
+        if (row && row.length > 0) {
           const rowId = (row[0] || "").trim().replace(/^"|"$/g, '');
           const rowStatus = (row[9] || "").trim().toUpperCase().replace(/^"|"$/g, '');
           
@@ -139,23 +136,31 @@ export default {
 };
 
 /**
- * Parser de CSV compatible con comillas y saltos de línea
+ * Parser de CSV robusto y seguro
  */
 function parseCSV(text) {
-  const p = '', row = [''], ret = [row];
-  let i = 0, r = 0, s = !0, l;
-  for (l of text) {
-    if ('"' === l) {
-      if (s && l === p) row[i] += l;
-      s = !s;
-    } else if (',' === l && s) l = row[++i] = '';
-    else if ('\n' === l && s) {
-      if ('\r' === p) row[i] = row[i].slice(0, -1);
-      row = ret[++r] = [l = '']; i = 0;
-    } else row[i] += l;
-    p = l;
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let insideQuotes = false;
+    let currentCell = '';
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        insideQuotes = !insideQuotes;
+      } else if (char === ',' && !insideQuotes) {
+        row.push(currentCell.trim());
+        currentCell = '';
+      } else {
+        currentCell += char;
+      }
+    }
+    row.push(currentCell.trim());
+    result.push(row);
   }
-  return ret;
+  return result;
 }
 
 function getWelcomeHtml() {
@@ -194,7 +199,7 @@ function getNotFoundHtml(message) {
     h2 { color: #ffb4ab; margin: 0 0 12px; font-size: 20px; }
     p { color: #c7c5d2; font-size: 14px; margin: 0; line-height: 1.6; }
     code { background: #131329; padding: 2px 6px; border-radius: 6px; color: #ebc246; }
-    em, strong { color: #ffffff; }
+    strong { color: #ffffff; }
   </style>
 </head>
 <body>
