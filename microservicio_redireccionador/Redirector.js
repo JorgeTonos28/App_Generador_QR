@@ -18,7 +18,7 @@
  */
 
 // Configura aquí el ID de la hoja de cálculo de Google Sheets compartida
-const SPREADSHEET_ID = ""; // Ejemplo: "1AbCdEfGhIjKlMnOpQrStUvWxYz..."
+const SPREADSHEET_ID = "16IjlByHbbQN3eaaBDNuxF5k_7VFXNAoCNn0gfi8dI1Y"; // Ejemplo: "1AbCdEfGhIjKlMnOpQrStUvWxYz..."
 
 function doGet(e) {
   const qrId = (e && e.parameter && (e.parameter.r || e.parameter.id || e.parameter.q)) || "";
