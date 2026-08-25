@@ -13,11 +13,15 @@
   <!-- ========================================================================= -->
   <div id="initial-loading-screen" class="fixed inset-0 z-[100] bg-[#111125] flex flex-col items-center justify-center gap-6 transition-opacity duration-300">
     <div class="relative flex items-center justify-center">
-      <div class="w-24 h-24 border-4 border-[#1e1e38] border-t-[#ebc246] border-r-[#009c51] rounded-full animate-spin"></div>
-      <div class="absolute inset-0 flex items-center justify-center p-3">
-        <div class="w-14 h-14 bg-white rounded-2xl p-2 flex items-center justify-center shadow-lg border border-[#ebc246]/50">
-          <img src="<?= logoDataUrl ?>" class="w-full h-full object-contain" alt="INFOTEP">
-        </div>
+      <!-- Outer glowing spinner -->
+      <div class="w-20 h-20 border-4 border-[#1e1e38] border-t-[#ebc246] border-r-[#009c51] rounded-full animate-spin"></div>
+      <!-- Center instant vector emblem -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <svg class="w-10 h-10 text-[#c0c1ff]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="44" stroke="#ebc246" stroke-width="4" stroke-dasharray="180 80"/>
+          <circle cx="50" cy="50" r="28" fill="#131360" stroke="#009c51" stroke-width="3"/>
+          <path d="M50 34V66M34 50H66" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+        </svg>
       </div>
     </div>
     
@@ -542,20 +546,68 @@
             <div class="flex flex-col gap-2">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-secondary text-[20px]">hub</span>
-                <h3 class="font-bold text-sm text-secondary uppercase tracking-wider">Micro-Redirector Público</h3>
+                <h3 class="font-bold text-sm text-secondary uppercase tracking-wider">Micro-Redirector Dinámico</h3>
               </div>
               <p class="text-xs text-on-surface-variant leading-relaxed">
-                Permite mantener esta aplicación principal <strong>restringida a la organización</strong> mientras los enlaces dinámicos se procesan mediante un script secundario público (<code class="bg-surface-container-low px-1 py-0.5 rounded text-primary">Redirector.js</code>).
+                Permite redirecciones nativas y veloces (<code class="bg-surface-container-low px-1 py-0.5 rounded text-primary">Cloudflare Worker</code> o <code class="bg-surface-container-low px-1 py-0.5 rounded text-primary">Redirector.js</code>).
               </p>
               <div class="mt-2 flex flex-col gap-1">
-                <label for="cfg-redirector-url" class="text-[10px] uppercase font-bold text-on-surface-variant">URL del Micro-Redirector (Opcional):</label>
-                <input id="cfg-redirector-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="bg-surface-container-low text-on-surface text-xs px-3 py-2 rounded-xl border border-outline-variant/20 outline-none focus:border-secondary">
+                <label for="cfg-redirector-url" class="text-[10px] uppercase font-bold text-on-surface-variant">URL del Micro-Redirector:</label>
+                <input id="cfg-redirector-url" type="url" placeholder="https://infotep-qr.tu-usuario.workers.dev" class="bg-surface-container-low text-on-surface text-xs px-3 py-2 rounded-xl border border-outline-variant/20 outline-none focus:border-secondary">
               </div>
             </div>
             <button onclick="saveRedirectorConfig()" class="px-4 py-2.5 bg-secondary text-on-secondary font-bold text-xs rounded-xl shadow transition-all self-end flex items-center gap-2 hover:bg-secondary-fixed">
               <span class="material-symbols-outlined text-[16px]">save</span>
-              Guardar Configuración
+              Guardar URL Redirección
             </button>
+          </div>
+
+          <!-- Institutional Logos Management (App vs QRs) -->
+          <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col justify-between gap-4 shadow-md md:col-span-2">
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[22px]">image</span>
+                <h3 class="font-bold text-sm text-primary uppercase tracking-wider">Logotipos Institucionales (App vs Códigos QR)</h3>
+              </div>
+              <p class="text-xs text-on-surface-variant leading-relaxed">
+                Personaliza los identificadores de Google Drive para separar el logotipo a color de la aplicación del logotipo monocromático de los códigos QR.
+              </p>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
+                <!-- App Logo Slot -->
+                <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[18px]">palette</span>
+                    <span class="font-bold text-xs text-on-surface">Logo de la App (Color)</span>
+                  </div>
+                  <p class="text-[11px] text-on-surface-variant">Se muestra en la barra lateral y cabecera de este panel.</p>
+                  <div class="flex flex-col gap-1 mt-1">
+                    <label for="cfg-logo-file-id" class="text-[10px] uppercase font-bold text-on-surface-variant">ID de Google Drive:</label>
+                    <input id="cfg-logo-file-id" type="text" placeholder="1-IHuBImByVVU1j19DgYfhhiEf_aWQzqw" class="bg-surface text-on-surface text-xs px-3 py-2 rounded-xl border border-outline-variant/20 outline-none focus:border-primary">
+                  </div>
+                </div>
+
+                <!-- QR Logo Slot -->
+                <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-secondary text-[18px]">qr_code_2</span>
+                    <span class="font-bold text-xs text-on-surface">Logo para Códigos QR (Monocromático)</span>
+                  </div>
+                  <p class="text-[11px] text-on-surface-variant">Se incrusta en el centro de los códigos QR generados.</p>
+                  <div class="flex flex-col gap-1 mt-1">
+                    <label for="cfg-qr-logo-file-id" class="text-[10px] uppercase font-bold text-on-surface-variant">ID de Google Drive:</label>
+                    <input id="cfg-qr-logo-file-id" type="text" placeholder="Pega aquí el ID de Google Drive del logo monocromático" class="bg-surface text-on-surface text-xs px-3 py-2 rounded-xl border border-outline-variant/20 outline-none focus:border-secondary">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+              <button onclick="saveLogosConfig()" class="px-5 py-2.5 bg-primary text-on-primary font-bold text-xs rounded-xl shadow transition-all flex items-center gap-2 hover:bg-primary-fixed">
+                <span class="material-symbols-outlined text-[16px]">save</span>
+                Guardar Logotipos
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -729,7 +781,9 @@
               version: "<?= appVersion ?>",
               user: currentUser,
               webAppUrl: "<?= webAppUrl ?>",
-              logoDataUrl: "<?= logoDataUrl ?>",
+              appLogoDataUrl: "<?= appLogoDataUrl ?>",
+              qrLogoDataUrl: "<?= qrLogoDataUrl ?>",
+              logoDataUrl: "<?= appLogoDataUrl ?>",
               qrs: [],
               users: []
             });

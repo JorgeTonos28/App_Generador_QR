@@ -7,11 +7,10 @@
 ## 1. Propósito y Descripción General
 El **Sistema Generador de Códigos QR** es una plataforma institucional interna diseñada para eliminar la dependencia de servicios externos de pago y proporcionar control total sobre los códigos QR generados para campañas, materiales promocionales, eventos y folletos de INFOTEP.
 
-### Novedades v1.4.0
-- **Micro-Redirector Nativo en Cloudflare Workers (`microservicio_cloudflare/worker.js`):** Solución de nivel empresarial que procesa las redirecciones de códigos QR dinámicos mediante respuestas HTTP 302 nativas con tiempos de respuesta inferiores a 20 ms.
-- **Eliminación Total de Conflictos de Sesión:** Los códigos QR dinámicos ya no dependen de las restricciones de dominio de Google Workspace ni sufren por múltiples cuentas iniciadas en el navegador, funcionando de manera transparente y sin clics en el 100% de dispositivos móviles y de escritorio.
-- **Apertura Directa en Apps Nativas:** Los enlaces de Instagram, YouTube, Facebook y WhatsApp abren directamente las aplicaciones oficiales instaladas en el dispositivo móvil sin pantallas intermedias ni bloqueos de iframes.
-- **Sincronización en Tiempo Real con Google Sheets:** Los cambios de URL de destino realizados en el panel administrativo de la aplicación se reflejan de inmediato en los códigos QR impresos o distribuidos.
+### Novedades v1.4.1
+- **Separación de Logotipos (App vs QRs):** Se incorporaron dos slots independientes en la vista de Configuración: uno para el logotipo a color de la interfaz (`LOGO_FILE_ID`) y otro para el logotipo monocromático de los códigos QR (`QR_LOGO_FILE_ID`).
+- **Spinner Inicial Ultrarrápido:** Restauración del emblema SVG vectorial embebido en el loader inicial para garantizar una carga instantánea y fluida de la aplicación.
+- **Renderizado Dinámico de Logo Monocromático:** El motor de generación de QR en Canvas y exportador SVG utilizan automáticamente el logotipo configurado para códigos QR manteniendo proporciones perfectas.
 
 ---
 

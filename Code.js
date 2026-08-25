@@ -6,7 +6,7 @@
  * Backend Controller & REST-like API for Google Apps Script
  */
 
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.4.1";
 const DEFAULT_PRIMARY_COLOR = "#131360";
 const DEFAULT_SECONDARY_COLOR = "#ebc246";
 
@@ -59,7 +59,8 @@ function setupInitialSheets(ss) {
       ["APP_VERSION", APP_VERSION, "Versión actual"],
       ["PRIMARY_COLOR", "#131360", "Color primario institucional (Azul Marino)"],
       ["SECONDARY_COLOR", "#ebc246", "Color secundario de mercadeo (Amarillo)"],
-      ["LOGO_FILE_ID", "", "ID de Google Drive para el logotipo institucional"],
+      ["LOGO_FILE_ID", "", "ID de Google Drive para el logotipo institucional de la App (Color)"],
+      ["QR_LOGO_FILE_ID", "", "ID de Google Drive para el logotipo de los códigos QR (Monocromático)"],
       ["ADMIN_EMAILS", Session.getActiveUser().getEmail() || "admin@infotep.edu.do", "Correos de administradores iniciales"],
       ["WEBAPP_URL", ScriptApp.getService().getUrl() || "", "URL del despliegue de la Web App"],
       ["REDIRECTOR_URL", "", "URL opcional de un Micro-Redirector público externo"]
@@ -142,9 +143,9 @@ function getConfigMap_() {
 }
 
 /**
- * Resolves Base64 Data URL for institutional logo from Drive or Fallback Assets
+ * Resolves Base64 Data URL for App Interface Logo (Color) from Drive or Fallback Assets
  */
-function getLogoDataUrl_() {
+function getAppLogoDataUrl_() {
   const config = getConfigMap_();
   const fileId = config["LOGO_FILE_ID"];
   if (fileId) {
@@ -155,13 +156,40 @@ function getLogoDataUrl_() {
       const base64 = Utilities.base64Encode(blob.getBytes());
       return "data:" + contentType + ";base64," + base64;
     } catch (e) {
-      Logger.log("Error reading logo from Drive ID: " + e.message);
+      Logger.log("Error reading App logo from Drive ID: " + e.message);
     }
   }
   if (typeof APP_INFOTEP_LOGO_COLOR !== "undefined" && APP_INFOTEP_LOGO_COLOR) {
     return APP_INFOTEP_LOGO_COLOR;
   }
   return "";
+}
+
+/**
+ * Resolves Base64 Data URL for QR Center Logo (Monochromatic / Dedicated) from Drive or Fallback Assets
+ */
+function getQrLogoDataUrl_() {
+  const config = getConfigMap_();
+  const fileId = config["QR_LOGO_FILE_ID"] || config["LOGO_FILE_ID"];
+  if (fileId) {
+    try {
+      const file = DriveApp.getFileById(fileId);
+      const blob = file.getBlob();
+      const contentType = blob.getContentType() || "image/png";
+      const base64 = Utilities.base64Encode(blob.getBytes());
+      return "data:" + contentType + ";base64," + base64;
+    } catch (e) {
+      Logger.log("Error reading QR logo from Drive ID: " + e.message);
+    }
+  }
+  if (typeof APP_INFOTEP_LOGO_COLOR !== "undefined" && APP_INFOTEP_LOGO_COLOR) {
+    return APP_INFOTEP_LOGO_COLOR;
+  }
+  return "";
+}
+
+function getLogoDataUrl_() {
+  return getAppLogoDataUrl_();
 }
 
 /**
@@ -260,7 +288,9 @@ function doGet(e) {
   const indexTpl = HtmlService.createTemplateFromFile("Index");
   indexTpl.appVersion = APP_VERSION;
   indexTpl.currentUserJson = JSON.stringify(currentUser);
-  indexTpl.logoDataUrl = getLogoDataUrl_();
+  indexTpl.appLogoDataUrl = getAppLogoDataUrl_();
+  indexTpl.qrLogoDataUrl = getQrLogoDataUrl_();
+  indexTpl.logoDataUrl = getAppLogoDataUrl_();
   indexTpl.webAppUrl = ScriptApp.getService().getUrl() || "";
 
   return indexTpl.evaluate()
@@ -457,7 +487,9 @@ function apiBootstrap() {
     users: users,
     spreadsheetId: ss.getId(),
     webAppUrl: effectiveRedirectUrl,
-    logoDataUrl: getLogoDataUrl_()
+    appLogoDataUrl: getAppLogoDataUrl_(),
+    qrLogoDataUrl: getQrLogoDataUrl_(),
+    logoDataUrl: getAppLogoDataUrl_()
   };
 }
 
