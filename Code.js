@@ -6,7 +6,7 @@
  * Backend Controller & REST-like API for Google Apps Script
  */
 
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.4.2";
 const DEFAULT_PRIMARY_COLOR = "#131360";
 const DEFAULT_SECONDARY_COLOR = "#ebc246";
 
@@ -267,6 +267,21 @@ function getCurrentUser_() {
  * Handle dynamic QR redirection or Web App presentation
  */
 function doGet(e) {
+  // 1. Webhook for background metric recording from external redirectors (Cloudflare Worker)
+  if (e && e.parameter && (e.parameter.action === "recordScan" || e.parameter.scan)) {
+    const scanQrId = (e.parameter.id || e.parameter.scan || "").trim();
+    if (scanQrId) {
+      try {
+        recordScan_(scanQrId, e);
+        return ContentService.createTextOutput(JSON.stringify({ success: true, scanId: scanQrId }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.message }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+
   const qrId = (e && e.parameter && (e.parameter.r || e.parameter.id || e.parameter.q)) || "";
   
   if (qrId) {

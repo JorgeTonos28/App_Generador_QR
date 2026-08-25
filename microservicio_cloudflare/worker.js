@@ -19,6 +19,9 @@ let SPREADSHEET_ID = "";
 // Opción 2: O pega aquí la URL que te dio Google al "Publicar en la web" como CSV
 let PUBLISHED_CSV_URL = "";
 
+// Opción 3 (Opcional): URL de la App en Google Apps Script para registrar los escaneos
+let APPSCRIPT_WEBHOOK_URL = "";
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -97,6 +100,17 @@ export default {
         // Asegurar protocolo https://
         if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
           targetUrl = "https://" + targetUrl;
+        }
+
+        // Registrar métrica de escaneo en segundo plano (0ms de retraso para el usuario)
+        const webhookUrl = env.APPSCRIPT_WEBHOOK_URL || APPSCRIPT_WEBHOOK_URL;
+        if (webhookUrl && ctx && ctx.waitUntil) {
+          ctx.waitUntil(
+            fetch(`${webhookUrl}?action=recordScan&id=${encodeURIComponent(qrId)}`, {
+              method: "GET",
+              headers: { "User-Agent": request.headers.get("User-Agent") || "Mobile Scanner" }
+            }).catch(() => {})
+          );
         }
 
         // REDIRECCIÓN HTTP 302 NATIVA E INSTANTÁNEA (0 Clics)
